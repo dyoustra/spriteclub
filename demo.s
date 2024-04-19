@@ -10,7 +10,11 @@
 player_x:	.RES 1	;reserves 1 byte of memory for player's x coordinate
 player_y:	.RES 1  ;same but for y
 player_is_walking: .byte 0  ;not walking = 0	walking = 1
-player_walk_frame_counter: .byte 0 ;stores the frame of the player walk animation
+player_walk_frame_counter: .byte 8 ;stores the frame of the player walk animation
+
+enemy_1_x: .RES 1
+enemy_1_y: .RES 1
+enemy_1_movement_frame_counter: .byte 0 ;used to make the enemy move every other frame
 
 .segment "STARTUP"
 
@@ -83,7 +87,7 @@ LOADSPRITES:
 	LDA SPRITEDATA, X
 	STA $0200, X
 	INX
-	CPX #$20	;16bytes (4 bytes per sprite, 8 sprites total)
+	CPX #$60	; Allocate space for 24 sprites
 	BNE LOADSPRITES	
 
 ;LOADING BACKGROUND
@@ -140,6 +144,11 @@ LOADBACKGROUNDPALETTEDATA:
 	STA player_x
 	LDA $0200
 	STA player_y
+	
+	LDA $0220
+	STA enemy_1_y
+	LDA $0223
+	STA enemy_1_x
 	
 	INFLOOP:
 		JMP INFLOOP
@@ -210,9 +219,13 @@ NMI: ; PPU Update Loop -- gets called every frame
 
 		LDA player_y ; get player_y into A
 		STA $0200 ; update player_y in the sprite data
+		CMP #$31 ; top of the screen
 		TAX
-		DEX ; moves the player up
-		STX player_y ; update our player_y variable
+		BCC do_up_skip_decrease_player_y ; don't move up if we're at the top of the screen
+		do_up_decrease_player_y:
+			DEX ; moves the player up
+		do_up_skip_decrease_player_y:
+			STX player_y ; update our player_y variable
 	ReadUpDone:
 
 	ReadDown:
@@ -226,9 +239,13 @@ NMI: ; PPU Update Loop -- gets called every frame
 
 		LDA player_y ; get player_y into A
 		STA $0200 ; update player_y in the sprite data
+		CMP #$DF ; bottom of the screen
 		TAX
-		INX ; moves the player down
-		STX player_y ; update our player_y variable
+		BCS do_down_skip_increase_player_y ; don't move down if we're at the bottom of the screen
+		do_down_increase_player_y:
+			INX ; moves the player down
+		do_down_skip_increase_player_y:
+			STX player_y ; update our player_y variable
 	ReadDownDone:
 	
 	ReadLeft:
@@ -314,14 +331,102 @@ NMI: ; PPU Update Loop -- gets called every frame
 
 	player_idle_animation:
 		LDA #$00 
-		STA player_walk_frame_counter ; reset the walk animation
 		STA $0201 ; reset the sprite to idle position
+		LDA #$08
+		STA player_walk_frame_counter ; reset the walk animation
 	player_animation_done:
+
+	; ENEMY 1 MOVEMENT
+	; horizontal movement
+	LDA enemy_1_movement_frame_counter 
+	TAX
+	INX
+	STX enemy_1_movement_frame_counter ; increment the frame counter every frame
+
+	AND #$01
+	CMP #$01
+	BEQ enemy_1_move_done ; skip movement every other frame to make the enemy slower
+
+	LDA enemy_1_x
+	STA $0223
+	TAX
+	CPX player_x
+	BEQ enemy_1_end_move_x
+	BCC enemy_1_move_right
+	enemy_1_move_left:
+		DEX ; move left
+
+		; make the enemy face left
+		LDA $0222 ; get attributes for flipping horizontally
+		ORA #%01000000
+		STA $0222 ; write back after ensuring sprite flip horizontal bit is 1. other bits are preserved.
+
+		JMP enemy_1_end_move_x
+	enemy_1_move_right:
+		INX ; move right
+
+		; make the enemy face right
+		LDA $0222 ; get attributes for flipping horizontally
+		AND #%10111111
+		STA $0222 ; write back after ensuring sprite flip horizontal bit is 0. other bits are preserved.
+	enemy_1_end_move_x:
+		STX enemy_1_x
+
+	; vertical movement
+	LDA enemy_1_y
+	STA $0220
+	TAX
+	CPX player_y
+	BEQ enemy_1_end_move_y
+	BCC enemy_1_move_down
+	enemy_1_move_up:
+		DEX
+		JMP enemy_1_end_move_y
+	enemy_1_move_down:
+		INX
+	enemy_1_end_move_y:
+		STX enemy_1_y
+
+	enemy_1_move_done:
+
+	; ENEMY 1 ANIMATION
+	LDA enemy_1_movement_frame_counter
+
+	; slow down animation
+	LSR
+	LSR
+	LSR
+
+	; decide which animation frame to go to
+	AND #%00000011 ; look at lower 2 bits
+	BEQ enemy_1_frame_0
+	CMP #$03
+	BEQ enemy_1_frame_1
+	CMP #$01
+	BEQ enemy_1_frame_1
+	JMP enemy_1_frame_2
+
+	enemy_1_frame_0:
+		LDA #$10 ; pick frame 0
+		STA $0221 ; update the sprite
+		JMP enemy_1_animation_done
+
+	enemy_1_frame_1:
+		LDA #$11 ; pick frame 0
+		STA $0221 ; update the sprite
+		JMP enemy_1_animation_done
+
+	enemy_1_frame_2:
+		LDA #$12 ; pick frame 0
+		STA $0221 ; update the sprite
+		JMP enemy_1_animation_done
+
+	enemy_1_animation_done:
 
 	RTI
 
 PALETTEDATA:
-	.byte $2E, $27, $17, $15, 	$2E, $05, $00, $20, 	$2E, $05, $00, $20, 	$2E, $05, $00, $20 	;background palettes
+	.byte $2E, $27, $17, $15, 	$2E, $20, $07, $3B, 	$2E, $20, $2C, $1C, 	$2E, $05, $00, $20 	;background palettes
 	.byte $2E, $05, $00, $20, 	$2E, $20, $07, $3B, 	$2E, $20, $2C, $1C, 	$00, $3C, $2C, $1C 	;sprite palettes
 
 SPRITEDATA:
@@ -342,9 +447,40 @@ SPRITEDATA:
 ;+-------- Flip sprite vertically
 
 	; $0200
-	.byte $80, $00, $00000000, $60 ; player
+	.byte $80, $00, %00000000, $60 ; player
 	; $0204
-	;...
+	.byte $00, $FF, %00100000, $00 ; spear_tip
+	; $0208
+	.byte $00, $FF, %00100000, $00 ; spear_base
+	; $020C
+	.byte $00, $FF, %00100000, $00 ; spear_swoosh
+	; $0210
+	.byte $00, $FF, %00100000, $00 ; empty
+	; $0214
+	.byte $00, $FF, %00100000, $00 ; empty
+	; $0218
+	.byte $00, $FF, %00100000, $00 ; empty
+	; $021C
+	.byte $00, $FF, %00100000, $00 ; empty
+	; $0220
+	.byte $80, $10, %00000010, $80 ; enemy 1
+
+	; unused sprites
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty	
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $00, $FF, %00100000, $00 ; empty
 
 BACKGROUNDDATA:	;512 BYTES
 	.byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
