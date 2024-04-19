@@ -12,6 +12,16 @@ player_y:	.RES 1  ;same but for y
 player_is_walking: .byte 0  ;not walking = 0	walking = 1
 player_walk_frame_counter: .byte 0 ;stores the frame of the player walk animation
 
+; reserving memory for spear sprites, frame counter, and basic attacking flag
+spear_tip_x: .RES 1
+spear_tip_y: .RES 1
+spear_base_x: .RES 1
+spear_base_y: .RES 1
+spear_swoosh_x: .RES 1
+spear_swoosh_y: .RES 1
+player_is_basic_attacking: .byte 0
+spear_frame_counter: .byte 0 
+
 .segment "STARTUP"
 
 RESET:
@@ -83,7 +93,7 @@ LOADSPRITES:
 	LDA SPRITEDATA, X
 	STA $0200, X
 	INX
-	CPX #$20	;16bytes (4 bytes per sprite, 8 sprites total)
+	CPX #$60	;16bytes (4 bytes per sprite, 8 sprites total)
 	BNE LOADSPRITES	
 	
 ;ENABLE INTERUPTS
@@ -100,6 +110,16 @@ LOADSPRITES:
 	STA player_x
 	LDA $0200
 	STA player_y
+
+	LDA $0207
+	STA spear_tip_x 
+	LDA $0204
+	STA spear_tip_y
+
+	LDA $020B
+	STA spear_base_x 
+	LDA $0208
+	STA spear_base_y
 	
 	INFLOOP:
 		JMP INFLOOP
@@ -129,7 +149,11 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BNE DoA
 		JMP ReadADone
 	DoA:
-		;TODO -- add attack action trigger
+		;
+
+
+
+		;TODO -- add attack 1 action trigger
 	ReadADone:
 
 	ReadB:
@@ -138,7 +162,7 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BNE DoB
 		JMP ReadBDone
 	DoB:
-		;TODO -- add attack action trigger
+		;TODO -- add attack 2 action trigger
 	ReadBDone:
 
 	ReadSelect:
@@ -173,6 +197,25 @@ NMI: ; PPU Update Loop -- gets called every frame
 		TAX
 		DEX ; moves the player up
 		STX player_y ; update our player_y variable
+
+		LDA spear_tip_y
+		STA $0204 
+		LDA player_y
+		CLC
+		SBC #7
+		STA spear_tip_y
+
+		LDA spear_base_y
+		STA $0208
+		LDA player_y ; spear base can be same tile as player
+		STA spear_base_y
+
+		LDA spear_swoosh_y ; this will need some adjusting to get proper location
+		STA $020C
+		LDA player_y
+		; some logic here for offset
+		STA spear_base_y
+
 	ReadUpDone:
 
 	ReadDown:
@@ -189,6 +232,25 @@ NMI: ; PPU Update Loop -- gets called every frame
 		TAX
 		INX ; moves the player down
 		STX player_y ; update our player_y variable
+
+		LDA spear_tip_y
+		STA $0204 
+		LDA player_y
+		CLC
+		SBC #6
+		STA spear_tip_y
+
+		LDA spear_base_y
+		STA $020`8
+		LDA player_y
+		STA spear_base_y
+
+		LDA spear_swoosh_y
+		STA $020C
+		LDA player_y
+		TAX 
+		; some logic here for swoosh
+		STX spear_base_y
 	ReadDownDone:
 	
 	ReadLeft:
@@ -205,11 +267,44 @@ NMI: ; PPU Update Loop -- gets called every frame
 		TAX
 		DEX ; moves the player left
 		STX player_x ; update our player_x variable
+
+		LDA spear_tip_x 
+		STA $0207
+		LDA player_x 
+		STA spear_tip_x
+
+		LDA spear_base_x 
+		STA $020B
+		LDA player_x 
+		STA spear_base_x
+
+		LDA spear_swoosh_x 
+		STA $020F
+		LDA player_x 
+		TAX
+		; some logic for swoosh
+		STX spear_swoosh_x
 		
 		; make the player face left
 		LDA $0202 ; get attributes for flipping horizontally
 		ORA #%01000000
 		STA $0202 ; write back after ensuring sprite flip horizontal bit is 1. other bits are preserved.
+
+		; spear_tip face left
+		LDA $0206
+		ORA #%01000000
+		STA $0206
+
+		; spear_base face left
+		LDA $020A
+		ORA #%01000000
+		STA $020A
+
+		; spear_swoosh face left
+		LDA $020E
+		ORA #%01000000
+		STA $020E
+
 	ReadLeftDone:
 
 	ReadRight:
@@ -227,10 +322,43 @@ NMI: ; PPU Update Loop -- gets called every frame
 		INX ; moves the player right
 		STX player_x ; update our player_x variable
 
+		LDA spear_tip_x 
+		STA $0207
+		LDA player_x 
+		STA spear_tip_x
+
+		LDA spear_base_x 
+		STA $020B
+		LDA player_x 
+		STA spear_base_x
+
+		LDA spear_swoosh_x 
+		STA $020F
+		LDA player_x 
+		TAX
+		;logic for swoosh
+		STX spear_swoosh_x
+
 		; make the player face right
 		LDA $0202 ; get attributes for flipping horizontally
 		AND #%10111111
 		STA $0202 ; write back after ensuring sprite flip horizontal bit is 0. other bits are preserved.
+
+		; spear_tip face right
+		LDA $0206
+		AND #%10111111
+		STA $0206
+
+		; spear_base face right
+		LDA $020A
+		AND #%10111111
+		STA $020A
+
+		; spear_swoosh face right
+		LDA $020E
+		AND #%10111111
+		STA $020E
+
 	ReadRightDone:
 
 	; set the player animation frames
@@ -245,9 +373,9 @@ NMI: ; PPU Update Loop -- gets called every frame
 
 		; A >> 3
 		; animation changes frame every 8 real frames
+		LSR 
 		LSR
-		LSR
-		LSR
+		;LSR
 
 		AND #%00000011
 		CMP #$02
@@ -260,31 +388,48 @@ NMI: ; PPU Update Loop -- gets called every frame
 		player_walking_frame_0:
 			LDA #$00 ; pick frame 0
 			STA $0201 ; update the sprite
-			JMP player_animation_done
+			JMP spear_animation
 
 		player_walking_frame_1:
-			LDA #$01 ; pick frame 0
+			LDA #$01 ; pick frame 1
 			STA $0201 ; update the sprite
-			JMP player_animation_done
+			JMP spear_animation
 
 		player_walking_frame_2:
-			LDA #$02 ; pick frame 0
+			LDA #$02 ; pick frame 2
 			STA $0201 ; update the sprite
-			JMP player_animation_done
+			JMP spear_animation
 
 	player_idle_animation:
 		LDA #$00 
 		STA player_walk_frame_counter ; reset the walk animation
 		STA $0201 ; reset the sprite to idle position
-	player_animation_done:
+	spear_animation: ; TODO: change to spear_animation or something like that
+		LDA #$03
+		STA $0205
+		LDA #$13
+		STA $0209
 
-	RTI
+	RTI ; return from NMI interrupt
 
 PALETTEDATA:
 	.byte $00, $0A, $15, $01, 	$00, $0A, $15, $01, 	$00, $29, $28, $27, 	$00, $34, $24, $14 	;background palettes
 	.byte $2E, $05, $00, $20, 	$2E, $20, $17, $3B, 	$2E, $20, $2C, $1C, 	$00, $3C, $2C, $1C 	;sprite palettes
 
 SPRITEDATA:
+; address % 4 == 0 --> sprite's y-coordinate 
+; address % 4 == 1 --> sprite's tile index from the pattern table
+; address % 4 == 2 --> sprite's attribute table
+; address % 4 == 3 --> sprite's x-coordinate
+
+; SPRITE ADDRESS TABLE
+; PLAYER SPRITES:	$0200-$021F (8 Sprites)
+; $0200-$0203 --> Player
+; $0204-$0207 --> Base of Spear
+; $0208-$020B --> Bottom Swoosh 
+; $020C-$020F --> Tip of Spear
+; ENEMY SPRITES:	$0220-$0260 (16 Sprites)
+
 ;$0200 - The Y coordinate of the sprite on screen
 ;$0201 - The Tile Index of the sprite from the Pattern Table, allowing you to pick which tile to use for that sprite.
 ;$0202 - The Attribute Table of the sprite. 
@@ -295,15 +440,42 @@ SPRITEDATA:
 ;Y, SPRITE NUM, attributes, X
 ;76543210
 ;||||||||
-;||||||++- Palette (4 to 7) of sprite
-;|||+++--- Unimplemented
-;||+------ Priority (0: in front of background; 1: behind background)
-;|+------- Flip sprite horizontally
-;+-------- Flip sprite vertically
+;||||||++ - Palette (4 to 7) of sprite
+;|||+++-- - Unimplemented
+;||+----- - Priority (0: in front of background; 1: behind background)
+;|+------ - Flip sprite horizontally
+;+------- - Flip sprite vertically
 
-	; $0200
-	.byte $40, $00, $00000000, $F0 ; player
-	; $0204
+	; $0200 -- PLAYER
+	.byte $40, $00, %00000000, $F0 ; y, palette, attributes, x
+	; $0204 -- SPEAR_TIP
+	.byte $39, $03, %00000001, $F0
+	; $0208 -- SPEAR_BASE
+	.byte $40, $13, %00000001, $F0 
+	; $020C -- SPEAR_SWOOSH
+	.byte $40, $FF, %00000001, $F0 ; start with tile FF so it doesn't show
+
+
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
+	.byte $40, $FF, %00000000, $F0 
 	;...
 	
 .segment "VECTORS"
