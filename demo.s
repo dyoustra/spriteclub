@@ -21,6 +21,9 @@ spear_swoosh_x: .RES 1
 spear_swoosh_y: .RES 1
 player_is_basic_attacking: .byte 0
 basic_attack_frame_counter: .byte 0 
+spear_tip_tile_index: .byte 0
+spear_base_tile_index: .byte 0
+spear_swoosh_tile_index: .byte 0
 
 .segment "STARTUP"
 
@@ -198,24 +201,6 @@ NMI: ; PPU Update Loop -- gets called every frame
 		DEX ; moves the player up
 		STX player_y ; update our player_y variable
 
-		LDA spear_tip_y
-		STA $0204 
-		LDA player_y
-		CLC
-		SBC #7
-		STA spear_tip_y
-
-		LDA spear_base_y
-		STA $0208
-		LDA player_y ; spear base can be same tile as player
-		STA spear_base_y
-
-		LDA spear_swoosh_y ; this will need some adjusting to get proper location
-		STA $020C
-		LDA player_y
-		; some logic here for offset
-		STA spear_base_y
-
 	ReadUpDone:
 
 	ReadDown:
@@ -233,24 +218,6 @@ NMI: ; PPU Update Loop -- gets called every frame
 		INX ; moves the player down
 		STX player_y ; update our player_y variable
 
-		LDA spear_tip_y
-		STA $0204 
-		LDA player_y
-		CLC
-		SBC #6
-		STA spear_tip_y
-
-		LDA spear_base_y
-		STA $0208
-		LDA player_y
-		STA spear_base_y
-
-		LDA spear_swoosh_y
-		STA $020C
-		LDA player_y
-		TAX 
-		; some logic here for swoosh
-		STX spear_base_y
 	ReadDownDone:
 	
 	ReadLeft:
@@ -267,23 +234,6 @@ NMI: ; PPU Update Loop -- gets called every frame
 		TAX
 		DEX ; moves the player left
 		STX player_x ; update our player_x variable
-
-		LDA spear_tip_x 
-		STA $0207
-		LDA player_x 
-		STA spear_tip_x
-
-		LDA spear_base_x 
-		STA $020B
-		LDA player_x 
-		STA spear_base_x
-
-		LDA spear_swoosh_x 
-		STA $020F
-		LDA player_x 
-		TAX
-		; some logic for swoosh
-		STX spear_swoosh_x
 		
 		; make the player face left
 		LDA $0202 ; get attributes for flipping horizontally
@@ -322,24 +272,7 @@ NMI: ; PPU Update Loop -- gets called every frame
 		INX ; moves the player right
 		STX player_x ; update our player_x variable
 
-		LDA spear_tip_x 
-		STA $0207
-		LDA player_x 
-		STA spear_tip_x
-
-		LDA spear_base_x 
-		STA $020B
-		LDA player_x 
-		STA spear_base_x
-
-		LDA spear_swoosh_x 
-		STA $020F
-		LDA player_x 
-		TAX
-		;logic for swoosh
-		STX spear_swoosh_x
-
-		; make the player face right
+		; make the player face righta
 		LDA $0202 ; get attributes for flipping horizontally
 		AND #%10111111
 		STA $0202 ; write back after ensuring sprite flip horizontal bit is 0. other bits are preserved.
@@ -375,7 +308,7 @@ NMI: ; PPU Update Loop -- gets called every frame
 		; animation changes frame every 8 real frames
 		LSR 
 		LSR
-		;LSR
+		; LSR
 
 		AND #%00000011
 		CMP #$02
@@ -408,72 +341,285 @@ NMI: ; PPU Update Loop -- gets called every frame
 
 	spear_animation:
 
+	; maybe TODO: update spear_tip, spear_base, and spear_swoosh locations here
+
 	LDA player_is_basic_attacking
-	BEQ spear_idle_animation
+	BEQ intermediate_branch_4 ; goes to spear_idle_animation
 	spear_basic_attack_animation:
+		; load spear coordinates to memory
+		LDA spear_tip_x
+		STA $0207
+		LDA spear_tip_y
+		STA $0204
+		LDA spear_base_x
+		STA $020B
+		LDA spear_base_y
+		STA $0208
+		LDA spear_swoosh_x
+		STA $020F
+		LDA spear_swoosh_y
+		STA $020C
+		LDA spear_tip_tile_index
+		STA $0205
+		LDA spear_base_tile_index
+		STA $0209
+		LDA spear_swoosh_tile_index
+		STA $020D
+
 		; update the basic attack frame counter
 		LDX basic_attack_frame_counter
 		INX 
 		STX basic_attack_frame_counter
 		TXA
+		CMP #32
+		BEQ intermediate_branch_4
+
 
 		; A >> 3
 		; animation changes frame every 8 real frames
-		; LSR 
-		; LSRx
-		; LSR
+		; any change to this also needs to change the above CMP #24 line
+		LSR
+		LSR
+		LSR
 
 		AND #%00000011
 		CMP #$03
-		BEQ spear_attack_frame_3
+		BEQ intermediate_branch_5 ; goes to spear_attack_frame_3
 		AND #%00000011
 		CMP #$02
+		BEQ intermediate_branch_5 ; goes to spear_attack_frame_3
+		AND #%0000001
+		CMP #$01
 		BEQ spear_attack_frame_2
 		AND #%00000001
-		CMP #$01
+		CMP #$00
 		BEQ spear_attack_frame_1
 		
-		JMP spear_idle_animation
+		JMP spear_idle_animation ; this doesn't really work... hmm... TODO delete
+		
+		intermediate_branch_4:
+			JMP spear_idle_animation
 
 		spear_attack_frame_1: ; horizontal spear
 			LDA #$15
-			STA $0205 ; spear tip tile
+			STA spear_tip_tile_index ; spear tip tile
 			LDA #$14
-			STA $0209 ; spear base tile
+			STA spear_base_tile_index ; spear base tile
 			LDA #$FF
-			STA $020D ; spear swoosh tile
-			JMP after_animation
+			STA spear_swoosh_tile_index ; spear swoosh tile
+
+			LDA $0202 ; load which way player is facing
+			AND #%01000000 ; get the horizontal flip bit
+			BNE frame_1_face_left ; 1 means player facing left
+
+			frame_1_face_right:
+				LDA player_x
+				CLC
+				ADC #7
+				STA spear_tip_x
+
+				LDA player_x
+				SEC
+				SBC #1
+				STA spear_base_x
+
+				LDA player_y
+				STA spear_base_y
+				STA spear_tip_y
+
+				JMP after_animation
+
+			frame_1_face_left:
+				LDA player_x
+				SEC
+				SBC #7
+				STA spear_tip_x
+
+				LDA player_x
+				CLC
+				ADC #1
+				STA spear_base_x
+				
+				LDA player_y
+				STA spear_base_y
+				STA spear_tip_y
+
+				JMP after_animation
+
+		intermediate_branch_5:
+			JMP spear_attack_frame_3
 
 		spear_attack_frame_2: ; angle down spear
 			LDA #$05
-			STA $0205 ; spear tip tile
+			STA spear_tip_tile_index ; spear tip tile
 			LDA #$04
-			STA $0209 ; spear base tile
+			STA spear_base_tile_index ; spear base tile
 			LDA #$FF
-			STA $020D ; spear swoosh tile
-			JMP after_animation
+			STA spear_swoosh_tile_index ; spear swoosh tile
+			
+			LDA $0202 ; load which way player is facing
+			AND #%01000000 ; get the horizontal flip bit
+			BNE frame_2_face_left ; 1 means player facing left
+
+			frame_2_face_right:
+				LDA player_x
+				CLC
+				ADC #6
+				STA spear_tip_x
+
+				LDA player_y
+				CLC
+				ADC #4
+				STA spear_tip_y
+
+				LDA player_x
+				SEC
+				SBC #2
+				STA spear_base_x
+				
+				LDA player_y
+				CLC
+				ADC #4
+				STA spear_base_y
+
+				JMP after_animation
+
+			frame_2_face_left:
+				LDA player_x
+				SEC
+				SBC #6
+				STA spear_tip_x
+
+				LDA player_y
+				CLC
+				ADC #4
+				STA spear_tip_y
+
+				LDA player_x
+				CLC
+				ADC #2
+				STA spear_base_x
+
+				LDA player_y
+				CLC
+				ADC #4
+				STA spear_base_y
+				
+				JMP after_animation
 
 		spear_attack_frame_3: ; swoosh spear
 			LDA #$07
-			STA $0205 ; spear tip tile
+			STA spear_tip_tile_index ; spear tip tile
 			LDA #$16
-			STA $0209 ; spear base tile
+			STA spear_base_tile_index ; spear base tile
 			LDA #$17
-			STA $020D ; spear swoosh tile
-			JMP after_animation
+			STA spear_swoosh_tile_index ; spear swoosh tile
+
+			LDA $0202 ; load which way player is facing
+			AND #%01000000 ; get the horizontal flip bit
+			BNE frame_3_face_left ; 1 means player facing left
+
+			frame_3_face_right:
+				LDA player_x
+				CLC
+				ADC #6
+				STA spear_tip_x
+
+				LDA player_y
+				SEC
+				SBC #5
+				STA spear_tip_y
+
+				LDA player_x
+				SEC
+				SBC #2
+				STA spear_base_x
+
+				LDA player_y
+				CLC
+				ADC #3
+				STA spear_base_y
+
+				LDA player_x
+				CLC
+				ADC #6
+				STA spear_swoosh_x
+
+				LDA player_y
+				CLC
+				ADC #3
+				STA spear_swoosh_y
+
+				JMP after_animation
+
+			frame_3_face_left:
+				LDA player_x
+				SEC
+				SBC #6
+				STA spear_tip_x
+
+				LDA player_y
+				SEC
+				SBC #5
+				STA spear_tip_y
+
+				LDA player_x
+				CLC
+				ADC #2
+				STA spear_base_x
+
+				LDA player_y
+				CLC
+				ADC #3
+				STA spear_base_y
+
+				LDA player_x
+				SEC
+				SBC #6
+				STA spear_swoosh_x
+
+				LDA player_y
+				CLC
+				ADC #3
+				STA spear_swoosh_y
+
+				JMP after_animation
 
 	spear_idle_animation:
-		; reset spear_idle_animation
+		; if not attacking, reset spear_idle_animation
+		; LDA basic_attack_frame_counter
+		; AND #%00001111
+		; CMP #$0000
+		; BNE after_animation
+
+		; player_is_basic_attacking
 		LDA #$00
 		STA basic_attack_frame_counter
 		STA player_is_basic_attacking
 
+		LDA $0203 ; player_x
+		STA spear_base_x
+		STA $020B ; spear_base_x
+		STA spear_tip_x
+		STA $0207 ; spear_tip_x
+
+		LDA $0200 ; player_y
+		STA spear_base_y
+		STA $0208 ; spear_base_y
+		SEC
+		SBC #$08
+		STA spear_tip_y
+		STA $0204 ; spear_tip_y
+
 		LDA #$03
-		STA $0205 ; spear tip tile
+		STA spear_tip_tile_index ; spear tip tile
+		STA $0205
 		LDA #$13
-		STA $0209 ; spear base tile
+		STA spear_base_tile_index ; spear base tile
+		STA $0209
 		LDA #$FF
-		STA $020D ; spear swoosh tile
+		STA spear_swoosh_tile_index ; spear swoosh tile
+		STA $020D
 
 	after_animation:
 
