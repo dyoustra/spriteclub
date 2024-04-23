@@ -123,13 +123,8 @@ _B_topleft_y: .RES 1
 _B_bottomright_x: .RES 1
 _B_bottomright_y: .RES 1
 
-has_collided: .RES 1
-
-_condition_A: .RES 1
-_condition_B: .RES 1
-_condition_C: .RES 1
-_condition_D: .RES 1
-
+has_collided: .RES 1 ; note: unless health system is implemented, these variables can be the same 
+game_over: .RES 1
 
 .segment "STARTUP"
 
@@ -319,9 +314,14 @@ LOADBACKGROUNDPALETTEDATA:
 		JMP INFLOOP
 
 NMI: ; PPU Update Loop -- gets called every frame
-
 	LDA #$02	;LOAD SPRITE RANGE
 	STA $4014
+
+	LDA game_over 
+	BEQ :+ 
+	RTI
+
+	:
 
 	; used for animation -- by default the player is not walking
 	; if the player is walking, the flag will be set when input is read
@@ -1499,51 +1499,37 @@ NMI: ; PPU Update Loop -- gets called every frame
 ; 	STA $0240
 
 	ENEMY_COLLISION: 
+		; load sprite A and B, check collision, execute collision
 		LDA player_x
 		STA _A_topleft_x
+		CLC 
+		ADC #4 ; player hitbox is 4x8
+		STA _A_bottomright_x
 
 		LDA player_y
 		STA _A_topleft_y
-		
-		LDA player_x 
-		CLC
-		ADC #4 ; hitbox is 4x8
-		STA _A_bottomright_x
-		
-		LDA player_y
 		CLC
 		ADC #8 ; hitbox is 4x8
 		STA _A_bottomright_y
 
 		LDA enemy_1_x
 		STA _B_topleft_x 
-
-		LDA enemy_1_y 
-		STA _B_topleft_y 
-
-		LDA enemy_1_x 
 		CLC 
 		ADC #8 ; hitbox is 8x8
 		STA _B_bottomright_x 
 
-		LDA enemy_1_y
+		LDA enemy_1_y 
+		STA _B_topleft_y 
 		CLC 
 		ADC #8 ; hitbox is 8x8
 		STA _B_bottomright_y
 
 		JSR CHECK_COLLISION
+		JSR EXECUTE_PLAYER_COLLISION
+
+
 		
-		STA has_collided
-
-		BEQ DIDNT_COLLIDE 
 		
-		LDA #$FF 
-		STA $0201
-
-		DIDNT_COLLIDE: 
-
-
-
  	RTI
 
 ENEMY_MOVEMENT_HANDLER:
@@ -1963,26 +1949,18 @@ CHECK_COLLISION:
 	LDA _A_topleft_x 
 	CMP _B_bottomright_x
 	BCS NO_COLLISION
-	LDA #1 
-	STA _condition_A
 
 	LDA _A_bottomright_x 
 	CMP _B_topleft_x
 	BCC NO_COLLISION 
-	LDA #1 
-	STA _condition_B
 
 	LDA _A_topleft_y 
 	CMP _B_bottomright_y
 	BCS NO_COLLISION 
-	LDA #1 
-	STA _condition_C
 
 	LDA _A_bottomright_y
 	CMP _B_topleft_y
 	BCC NO_COLLISION
-	LDA #1 
-	STA _condition_D
 
 	COLLISION: 
 	LDA #1
@@ -1991,9 +1969,20 @@ CHECK_COLLISION:
 	LDA #0
 	RTS 
 
+EXECUTE_PLAYER_COLLISION: 
+	BEQ DIDNT_COLLIDE; if accumulator is zero
+	STA has_collided 
+	LDA $0202
+	ORA #%00000011
+	STA $0202
+	LDA #1
+	STA game_over
+	DIDNT_COLLIDE: 
+	RTS
+
 PALETTEDATA:
 	.byte $2E, $27, $17, $15, 	$2E, $20, $07, $3B, 	$2E, $20, $2C, $1C, 	$2E, $05, $00, $20 	;background palettes
-	.byte $2E, $05, $00, $20, 	$2E, $20, $07, $3B, 	$2E, $20, $2C, $1C, 	$00, $3C, $2C, $1C 	;sprite palettes
+	.byte $2E, $05, $00, $20, 	$2E, $20, $07, $3B, 	$2E, $20, $2C, $1C, 	$2E, $20, $05, $15 	;sprite palettes
 
 SPRITEDATA:
 ;$0200 - The Y coordinate of the sprite on screen
