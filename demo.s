@@ -20,7 +20,7 @@ spear_base_y: .RES 1
 spear_swoosh_x: .RES 1
 spear_swoosh_y: .RES 1
 player_is_basic_attacking: .byte 0
-spear_frame_counter: .byte 0 
+basic_attack_frame_counter: .byte 0 
 
 .segment "STARTUP"
 
@@ -149,8 +149,8 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BNE DoA
 		JMP ReadADone
 	DoA:
-		;
-
+		LDA #$01
+		STA player_is_basic_attacking	; basic attacking = true
 
 
 		;TODO -- add attack 1 action trigger
@@ -241,7 +241,7 @@ NMI: ; PPU Update Loop -- gets called every frame
 		STA spear_tip_y
 
 		LDA spear_base_y
-		STA $020`8
+		STA $0208
 		LDA player_y
 		STA spear_base_y
 
@@ -383,10 +383,11 @@ NMI: ; PPU Update Loop -- gets called every frame
 		AND #%00000001
 		CMP #$01
 		BEQ player_walking_frame_1
+
 		JMP player_walking_frame_0
 
 		player_walking_frame_0:
-			LDA #$00 ; pick frame 0
+			LDA #$00 ; pick frame 0 (same as idle)
 			STA $0201 ; update the sprite
 			JMP spear_animation
 
@@ -404,11 +405,77 @@ NMI: ; PPU Update Loop -- gets called every frame
 		LDA #$00 
 		STA player_walk_frame_counter ; reset the walk animation
 		STA $0201 ; reset the sprite to idle position
-	spear_animation: ; TODO: change to spear_animation or something like that
+
+	spear_animation:
+
+	LDA player_is_basic_attacking
+	BEQ spear_idle_animation
+	spear_basic_attack_animation:
+		; update the basic attack frame counter
+		LDX basic_attack_frame_counter
+		INX 
+		STX basic_attack_frame_counter
+		TXA
+
+		; A >> 3
+		; animation changes frame every 8 real frames
+		; LSR 
+		; LSRx
+		; LSR
+
+		AND #%00000011
+		CMP #$03
+		BEQ spear_attack_frame_3
+		AND #%00000011
+		CMP #$02
+		BEQ spear_attack_frame_2
+		AND #%00000001
+		CMP #$01
+		BEQ spear_attack_frame_1
+		
+		JMP spear_idle_animation
+
+		spear_attack_frame_1: ; horizontal spear
+			LDA #$15
+			STA $0205 ; spear tip tile
+			LDA #$14
+			STA $0209 ; spear base tile
+			LDA #$FF
+			STA $020D ; spear swoosh tile
+			JMP after_animation
+
+		spear_attack_frame_2: ; angle down spear
+			LDA #$05
+			STA $0205 ; spear tip tile
+			LDA #$04
+			STA $0209 ; spear base tile
+			LDA #$FF
+			STA $020D ; spear swoosh tile
+			JMP after_animation
+
+		spear_attack_frame_3: ; swoosh spear
+			LDA #$07
+			STA $0205 ; spear tip tile
+			LDA #$16
+			STA $0209 ; spear base tile
+			LDA #$17
+			STA $020D ; spear swoosh tile
+			JMP after_animation
+
+	spear_idle_animation:
+		; reset spear_idle_animation
+		LDA #$00
+		STA basic_attack_frame_counter
+		STA player_is_basic_attacking
+
 		LDA #$03
-		STA $0205
+		STA $0205 ; spear tip tile
 		LDA #$13
-		STA $0209
+		STA $0209 ; spear base tile
+		LDA #$FF
+		STA $020D ; spear swoosh tile
+
+	after_animation:
 
 	RTI ; return from NMI interrupt
 
