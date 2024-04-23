@@ -11,28 +11,44 @@ player_x:	.RES 1	;reserves 1 byte of memory for player's x coordinate
 player_y:	.RES 1  ;same but for y
 player_is_walking: .byte 0  ;not walking = 0	walking = 1
 player_walk_frame_counter: .byte 8 ;stores the frame of the player walk animation
+player_is_rolling: .byte 0
+player_roll_frame_counter: .byte 0
+player_roll_direction_x: .byte 0
+player_is_moving_horizontally: .byte 0
 
 ; CHASE ENEMIES
 enemy_1_x: .RES 1
 enemy_1_y: .RES 1
 enemy_1_offset_x: .byte 0
 enemy_1_offset_y: .byte 0
+enemy_1_initialized: .byte 0
+enemy_1_active: .byte 0
+enemy_1_spawn_counter: .byte 0
 
 enemy_2_x: .RES 1
 enemy_2_y: .RES 1
 enemy_2_offset_x: .byte 0
 enemy_2_offset_y: .byte 0
+enemy_2_initialized: .byte 0
+enemy_2_active: .byte 0
+enemy_2_spawn_counter: .byte 0
 
 enemy_3_x: .RES 1
 enemy_3_y: .RES 1
 enemy_3_offset_x: .byte 0
 enemy_3_offset_y: .byte 0
+enemy_3_initialized: .byte 0
+enemy_3_active: .byte 0
+enemy_3_spawn_counter: .byte 0
 
 ; PROJECTILE ENEMIES
 enemy_4_x: .RES 1
 enemy_4_y: .RES 1
 enemy_4_target_x: .byte 0
 enemy_4_target_y: .byte 0
+enemy_4_initialized: .byte 0
+enemy_4_active: .byte 0
+enemy_4_spawn_counter: .byte 0
 bone_1_vel_x: .RES 1
 bone_1_vel_y: .RES 1
 
@@ -40,6 +56,9 @@ enemy_5_x: .RES 1
 enemy_5_y: .RES 1
 enemy_5_target_x: .byte 0
 enemy_5_target_y: .byte 0
+enemy_5_initialized: .byte 0
+enemy_5_active: .byte 0
+enemy_5_spawn_counter: .byte 0
 bone_2_vel_x: .RES 1
 bone_2_vel_y: .RES 1
 
@@ -47,6 +66,9 @@ enemy_6_x: .RES 1
 enemy_6_y: .RES 1
 enemy_6_target_x: .byte 0
 enemy_6_target_y: .byte 0
+enemy_6_initialized: .byte 0
+enemy_6_active: .byte 0
+enemy_6_spawn_counter: .byte 0
 bone_3_vel_x: .RES 1
 bone_3_vel_y: .RES 1
 
@@ -69,6 +91,12 @@ _bone_vel_y: .byte 0
 _bone_frame_counter: .byte 0
 
 _enemy_subroutine_counter: .byte 0
+
+_spawn_timer_lo: .byte 0
+_spawn_timer_hi: .byte 0
+
+_global_spawn_y: .RES 1
+_global_spawn_x: .RES 1
 
 seed: .RES 2 ; used for random number generation
 
@@ -199,6 +227,11 @@ LOADBACKGROUNDPALETTEDATA:
 	LDA #$13 ; seed to use
 	STA seed
 
+	LDA #$30
+	STA _global_spawn_y
+	LDA #$1A
+	STA _global_spawn_x
+
 	LDA $0203
 	STA player_x
 	LDA $0200
@@ -253,6 +286,7 @@ NMI: ; PPU Update Loop -- gets called every frame
 	; if the player is walking, the flag will be set when input is read
 	LDA #$00
 	STA player_is_walking ; mark the player as not walking
+	STA player_is_moving_horizontally
 
 	;	----------	CONTROLLER INPUTS	-----------
 	;	controller input sequence: 
@@ -278,7 +312,15 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BNE DoB
 		JMP ReadBDone
 	DoB:
-		;TODO -- add attack action trigger
+		LDA player_is_rolling
+		BNE ReadBDone
+		LDA player_roll_direction_x
+		BEQ ReadBDone
+		LDA #1
+		STA player_is_rolling
+		LDA #0
+		STA player_roll_frame_counter
+		STA player_roll_direction_x
 	ReadBDone:
 
 	ReadSelect:
@@ -305,6 +347,9 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BNE DoUp
 		JMP ReadUpDone
 	DoUp:
+		LDA player_is_rolling
+		BNE ReadUpDone
+
 		LDA #$01
 		STA player_is_walking ; mark the player as walking
 
@@ -325,6 +370,9 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BNE DoDown
 		JMP ReadDownDone
 	DoDown:
+		LDA player_is_rolling
+		BNE ReadDownDone
+
 		LDA #$01
 		STA player_is_walking ; mark the player as walking
 
@@ -345,6 +393,21 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BNE DoLeft
 		JMP ReadLeftDone
 	DoLeft:
+		LDA #1
+		STA player_is_moving_horizontally
+
+		; make the player face left
+		LDA $0202 ; get attributes for flipping horizontally
+		ORA #%01000000
+		STA $0202 ; write back after ensuring sprite flip horizontal bit is 1. other bits are preserved.
+
+		LDA player_roll_frame_counter
+		CMP #6
+		BEQ set_roll_dir_left
+
+		LDA player_is_rolling
+		BNE ReadLeftDone
+
 		LDA #$01
 		STA player_is_walking ; mark the player as walking
 
@@ -353,11 +416,10 @@ NMI: ; PPU Update Loop -- gets called every frame
 		TAX
 		DEX ; moves the player left
 		STX player_x ; update our player_x variable
-		
-		; make the player face left
-		LDA $0202 ; get attributes for flipping horizontally
-		ORA #%01000000
-		STA $0202 ; write back after ensuring sprite flip horizontal bit is 1. other bits are preserved.
+	
+		set_roll_dir_left:
+			LDA #$FE
+			STA player_roll_direction_x
 	ReadLeftDone:
 
 	ReadRight:
@@ -366,6 +428,21 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BNE DoRight
 		JMP ReadRightDone
 	DoRight:
+		LDA #1
+		STA player_is_moving_horizontally
+
+		; make the player face right
+		LDA $0202 ; get attributes for flipping horizontally
+		AND #%10111111
+		STA $0202 ; write back after ensuring sprite flip horizontal bit is 0. other bits are preserved.
+
+		LDA player_roll_frame_counter
+		CMP #6
+		BEQ set_roll_dir_right
+
+		LDA player_is_rolling
+		BNE ReadRightDone
+
 		LDA #$01
 		STA player_is_walking ; mark the player as walking
 
@@ -375,13 +452,14 @@ NMI: ; PPU Update Loop -- gets called every frame
 		INX ; moves the player right
 		STX player_x ; update our player_x variable
 
-		; make the player face right
-		LDA $0202 ; get attributes for flipping horizontally
-		AND #%10111111
-		STA $0202 ; write back after ensuring sprite flip horizontal bit is 0. other bits are preserved.
+		set_roll_dir_right:
+			LDA #2
+			STA player_roll_direction_x
 	ReadRightDone:
 
 	; set the player animation frames
+	LDA player_is_rolling
+	BNE player_rolling_animation
 	LDA player_is_walking
 	BEQ player_idle_animation
 	player_walking_animation:
@@ -425,11 +503,65 @@ NMI: ; PPU Update Loop -- gets called every frame
 		STA $0201 ; reset the sprite to idle position
 		LDA #$08
 		STA player_walk_frame_counter ; reset the walk animation
+		JMP player_animation_done
+	player_rolling_animation:
+		LDA player_roll_frame_counter
+		BNE roll_skip_horizontal_input_check
+		LDX player_is_moving_horizontally
+		CPX #0
+		BEQ player_end_roll_animation
+		roll_skip_horizontal_input_check:
+
+
+		CMP #36 ; stop the roll animation if needed
+		BEQ player_end_roll_animation
+		CMP #28
+		BNE player_roll_skip_freeze
+		LDX #0
+		STX player_roll_direction_x
+		player_roll_skip_freeze:
+
+		LSR
+		LSR
+		
+		CLC
+		ADC #$40
+
+		STA $0201
+
+		; move the player in the right direction
+		LDA player_x ; get player_x into A
+		STA $0203 ; update player_x in the sprite data
+		CLC
+		ADC player_roll_direction_x
+		STA player_x ; update our player_x variable
+
+		; increment the frame counter
+		LDA player_roll_frame_counter
+		TAX
+		INX
+		STX player_roll_frame_counter
+		JMP player_animation_done
+	player_end_roll_animation:
+		LDA #0
+		STA player_is_rolling
+		STA player_roll_direction_x
 	player_animation_done:
 
 	; ENEMY MOVEMENT
 	LDA #$00
 	STA _enemy_subroutine_counter
+
+	; incrememt spawn timers
+	LDA _spawn_timer_lo
+	BNE skip_hi_spawn_increment
+	LDY _spawn_timer_hi
+	INY
+	STY _spawn_timer_hi
+	skip_hi_spawn_increment:
+	TAX
+	INX
+	STX _spawn_timer_lo
 
 	; increment frame counter
 	LDA _enemy_frame_counter 
@@ -438,6 +570,11 @@ NMI: ; PPU Update Loop -- gets called every frame
 	STX _enemy_frame_counter ; increment the frame counter every frame
 
 	ENEMY_1:
+		LDA enemy_1_initialized
+		BEQ enemy_1_handle_uninitalized
+		LDA enemy_1_active
+		BEQ enemy_1_handle_inactive
+
 		; update enemy 1 x and y
 		LDA enemy_1_x
 		STA $0223
@@ -467,12 +604,57 @@ NMI: ; PPU Update Loop -- gets called every frame
 		; pick the right animation frame for the enemy
 		LDA _enemy_sprite_tile_index
 		STA $0221
+		JMP enemy_1_handle_done
+	
+		enemy_1_handle_uninitalized:
+			LDA _spawn_timer_hi
+			CMP #2 ; spawn after 3 cycles
+			BNE enemy_1_not_ready_to_initalize
+			LDA #1
+			STA enemy_1_initialized
+			LDA _global_spawn_x
+			STA enemy_1_x
+			STA $0223 
+			LDA _global_spawn_y
+			STA enemy_1_y
+			STA $0220
+			JSR MOVE_SPAWN_POINT
+			enemy_1_not_ready_to_initalize:
+			JMP enemy_1_handle_done
+		enemy_1_handle_inactive:
+			LDA enemy_1_spawn_counter
+			CMP #32
+			BNE enemy_1_spawn_animation
+			LDA #1
+			STA enemy_1_active
+			JMP enemy_1_handle_done
+		enemy_1_spawn_animation:
+			LDA enemy_1_spawn_counter 
+			TAX
+			INX
+			STX enemy_1_spawn_counter ; increment the spawn counter
+			
+			LSR 
+			LSR
+			LSR
+			LSR
+
+			CLC
+			ADC #$50
+			STA $0221
+
+		enemy_1_handle_done:
 	
 	ENEMY_2:
 		LDA _enemy_subroutine_counter
 		TAX
 		INX
 		STX _enemy_subroutine_counter
+
+		LDA enemy_2_initialized
+		BEQ enemy_2_handle_uninitalized
+		LDA enemy_2_active
+		BEQ enemy_2_handle_inactive
 
 		; update enemy 1 x and y
 		LDA enemy_2_x
@@ -503,12 +685,57 @@ NMI: ; PPU Update Loop -- gets called every frame
 		; pick the right animation frame for the enemy
 		LDA _enemy_sprite_tile_index
 		STA $0225
+		JMP enemy_2_handle_done
+	
+		enemy_2_handle_uninitalized:
+			LDA _spawn_timer_hi
+			CMP #3 ; spawn after 3 cycles
+			BNE enemy_2_not_ready_to_initalize
+			LDA #1
+			STA enemy_2_initialized
+			LDA _global_spawn_x
+			STA enemy_2_x
+			STA $0227 
+			LDA _global_spawn_y
+			STA enemy_2_y
+			STA $0224
+			JSR MOVE_SPAWN_POINT
+			enemy_2_not_ready_to_initalize:
+			JMP enemy_2_handle_done
+		enemy_2_handle_inactive:
+			LDA enemy_2_spawn_counter
+			CMP #32
+			BNE enemy_2_spawn_animation
+			LDA #1
+			STA enemy_2_active
+			JMP enemy_2_handle_done
+		enemy_2_spawn_animation:
+			LDA enemy_2_spawn_counter 
+			TAX
+			INX
+			STX enemy_2_spawn_counter ; increment the spawn counter
+			
+			LSR 
+			LSR
+			LSR
+			LSR
+
+			CLC
+			ADC #$50
+			STA $0225
+
+		enemy_2_handle_done:
 
 	ENEMY_3:
 		LDA _enemy_subroutine_counter
 		TAX
 		INX
 		STX _enemy_subroutine_counter
+
+		LDA enemy_3_initialized
+		BEQ enemy_3_handle_uninitalized
+		LDA enemy_3_active
+		BEQ enemy_3_handle_inactive
 
 		; update enemy 1 x and y
 		LDA enemy_3_x
@@ -539,12 +766,57 @@ NMI: ; PPU Update Loop -- gets called every frame
 		; pick the right animation frame for the enemy
 		LDA _enemy_sprite_tile_index
 		STA $0229
+		JMP enemy_3_handle_done
+	
+		enemy_3_handle_uninitalized:
+			LDA _spawn_timer_hi
+			CMP #4 ; spawn after 4 cycles
+			BNE enemy_3_not_ready_to_initalize
+			LDA #1
+			STA enemy_3_initialized
+			LDA _global_spawn_x
+			STA enemy_3_x
+			STA $022B 
+			LDA _global_spawn_y
+			STA enemy_3_y
+			STA $0228
+			JSR MOVE_SPAWN_POINT
+			enemy_3_not_ready_to_initalize:
+			JMP enemy_3_handle_done
+		enemy_3_handle_inactive:
+			LDA enemy_3_spawn_counter
+			CMP #32
+			BNE enemy_3_spawn_animation
+			LDA #1
+			STA enemy_3_active
+			JMP enemy_3_handle_done
+		enemy_3_spawn_animation:
+			LDA enemy_3_spawn_counter 
+			TAX
+			INX
+			STX enemy_3_spawn_counter ; increment the spawn counter
+			
+			LSR 
+			LSR
+			LSR
+			LSR
+
+			CLC
+			ADC #$50
+			STA $0229
+
+		enemy_3_handle_done:
 
 	ENEMY_4:
 		LDA _enemy_subroutine_counter
 		TAX
 		INX
 		STX _enemy_subroutine_counter
+
+		LDA enemy_4_initialized
+		BEQ enemy_4_handle_uninitalized
+		LDA enemy_4_active
+		BEQ enemy_4_handle_inactive
 
 		; update enemy x and y
 		LDA enemy_4_x
@@ -576,11 +848,59 @@ NMI: ; PPU Update Loop -- gets called every frame
 		LDA _projectile_enemy_target_y
 		STA enemy_4_target_y
 
+		JMP enemy_4_handle_done
+	
+		enemy_4_handle_uninitalized:
+			LDA _spawn_timer_hi
+			CMP #5 ; spawn after 5 cycles
+			BNE enemy_4_not_ready_to_initalize
+			LDA #1
+			STA enemy_4_initialized
+			LDA _global_spawn_x
+			STA enemy_4_x
+			STA $022F 
+			LDA _global_spawn_y
+			STA enemy_4_y
+			STA $022C
+			JSR MOVE_SPAWN_POINT
+			enemy_4_not_ready_to_initalize:
+			JMP enemy_4_handle_done
+		enemy_4_handle_inactive:
+			LDA enemy_4_spawn_counter
+			CMP #32
+			BNE enemy_4_spawn_animation
+			LDA #$20
+			STA $022D
+			LDA #1
+			STA enemy_4_active
+			JMP enemy_4_handle_done
+		enemy_4_spawn_animation:
+			LDA enemy_4_spawn_counter 
+			TAX
+			INX
+			STX enemy_4_spawn_counter ; increment the spawn counter
+			
+			LSR 
+			LSR
+			LSR
+			LSR
+
+			CLC
+			ADC #$60
+			STA $022D
+
+		enemy_4_handle_done:
+
 	ENEMY_5:
 		LDA _enemy_subroutine_counter
 		TAX
 		INX
 		STX _enemy_subroutine_counter
+
+		LDA enemy_5_initialized
+		BEQ enemy_5_handle_uninitalized
+		LDA enemy_5_active
+		BEQ enemy_5_handle_inactive
 
 		; update enemy x and y
 		LDA enemy_5_x
@@ -612,11 +932,59 @@ NMI: ; PPU Update Loop -- gets called every frame
 		LDA _projectile_enemy_target_y
 		STA enemy_5_target_y
 
+		JMP enemy_5_handle_done
+	
+		enemy_5_handle_uninitalized:
+			LDA _spawn_timer_hi
+			CMP #6 ; spawn after 6 cycles
+			BNE enemy_5_not_ready_to_initalize
+			LDA #1
+			STA enemy_5_initialized
+			LDA _global_spawn_x
+			STA enemy_5_x
+			STA $0233
+			LDA _global_spawn_y
+			STA enemy_5_y
+			STA $0230
+			JSR MOVE_SPAWN_POINT
+			enemy_5_not_ready_to_initalize:
+			JMP enemy_5_handle_done
+		enemy_5_handle_inactive:
+			LDA enemy_5_spawn_counter
+			CMP #32
+			BNE enemy_5_spawn_animation
+			LDA #$20
+			STA $0231
+			LDA #1
+			STA enemy_5_active
+			JMP enemy_5_handle_done
+		enemy_5_spawn_animation:
+			LDA enemy_5_spawn_counter 
+			TAX
+			INX
+			STX enemy_5_spawn_counter ; increment the spawn counter
+			
+			LSR 
+			LSR
+			LSR
+			LSR
+
+			CLC
+			ADC #$60
+			STA $0231
+
+		enemy_5_handle_done:
+
 	ENEMY_6:
 		LDA _enemy_subroutine_counter
 		TAX
 		INX
 		STX _enemy_subroutine_counter
+
+		LDA enemy_6_initialized
+		BEQ enemy_6_handle_uninitalized
+		LDA enemy_6_active
+		BEQ enemy_6_handle_inactive
 
 		; update enemy x and y
 		LDA enemy_6_x
@@ -648,7 +1016,50 @@ NMI: ; PPU Update Loop -- gets called every frame
 		LDA _projectile_enemy_target_y
 		STA enemy_6_target_y
 
-	; BONE MOVEMENT
+		JMP enemy_6_handle_done
+	
+		enemy_6_handle_uninitalized:
+			LDA _spawn_timer_hi
+			CMP #7 ; spawn after 7 cycles
+			BNE enemy_6_not_ready_to_initalize
+			LDA #1
+			STA enemy_6_initialized
+			LDA _global_spawn_x
+			STA enemy_6_x
+			STA $0237
+			LDA _global_spawn_y
+			STA enemy_6_y
+			STA $0234
+			JSR MOVE_SPAWN_POINT
+			enemy_6_not_ready_to_initalize:
+			JMP enemy_6_handle_done
+		enemy_6_handle_inactive:
+			LDA enemy_6_spawn_counter
+			CMP #32
+			BNE enemy_6_spawn_animation
+			LDA #$20
+			STA $0235
+			LDA #1
+			STA enemy_6_active
+			JMP enemy_6_handle_done
+		enemy_6_spawn_animation:
+			LDA enemy_6_spawn_counter 
+			TAX
+			INX
+			STX enemy_6_spawn_counter ; increment the spawn counter
+			
+			LSR 
+			LSR
+			LSR
+			LSR
+
+			CLC
+			ADC #$60
+			STA $0235
+
+		enemy_6_handle_done:
+
+	BONE_MOVEMENT:
 	LDA _bone_frame_counter
 	TAX
 	INX
@@ -1097,6 +1508,16 @@ PRNG:
 	sta seed+0
 	rts
 
+MOVE_SPAWN_POINT:
+	LDA _global_spawn_x
+	CLC
+	ADC #$30
+	BCC no_overflow_spawn_point
+	LDA #$1A
+	no_overflow_spawn_point:
+	STA _global_spawn_x
+	RTS
+
 PALETTEDATA:
 	.byte $2E, $27, $17, $15, 	$2E, $20, $07, $3B, 	$2E, $20, $2C, $1C, 	$2E, $05, $00, $20 	;background palettes
 	.byte $2E, $05, $00, $20, 	$2E, $20, $07, $3B, 	$2E, $20, $2C, $1C, 	$00, $3C, $2C, $1C 	;sprite palettes
@@ -1135,17 +1556,17 @@ SPRITEDATA:
 	; $021C
 	.byte $00, $FF, %00100000, $00 ; empty
 	; $0220
-	.byte $80, $10, %00000010, $80 ; enemy 1
+	.byte $FF, $FF, %00000010, $FF ; enemy 1
 	; $0224
-	.byte $80, $10, %00000010, $30 ; enemy 2
+	.byte $FF, $FF, %00000010, $FF ; enemy 2
 	; $0228
-	.byte $80, $10, %00000010, $30 ; enemy 3
+	.byte $FF, $FF, %00000010, $FF ; enemy 3
 	; $022C
-	.byte $D0, $20, %00000010, $A0 ; enemy 4
+	.byte $FF, $FF, %00000010, $FF ; enemy 4
 	; $0230
-	.byte $D0, $20, %00000010, $A0 ; enemy 5
+	.byte $FF, $FF, %00000010, $FF ; enemy 5
 	; $0234
-	.byte $D0, $20, %00000010, $A0 ; enemy 6
+	.byte $FF, $FF, %00000010, $FF ; enemy 6
 	; $0238
 	.byte $FF, $30, %00000010, $FF ; bone 1
 	; $023C
