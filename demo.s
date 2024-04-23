@@ -149,6 +149,28 @@ LOADBACKGROUNDPALETTEDATA:
 	STA enemy_1_y
 	LDA $0223
 	STA enemy_1_x
+
+;SET UP MUSIC
+
+LOAD_MUS_DATA:
+ 	LDX #00
+MUSDATALOOP:
+ 	LDA wismm_music_data, X
+ 	STA $1D00, X
+	INX
+	CPX #$F2
+	BNE MUSDATALOOP
+
+	LDA #$01
+	 LDX #.lobyte(wismm_music_data)
+	 LDY #.hibyte(wismm_music_data)
+	;LDX #$00
+	;LDY #$1D
+	JSR FamiToneInit
+
+	LDA #00
+
+	JSR FamiToneMusicPlay
 	
 	INFLOOP:
 		JMP INFLOOP
@@ -423,6 +445,9 @@ NMI: ; PPU Update Loop -- gets called every frame
 
 	enemy_1_animation_done:
 
+	update_music:
+		JSR FamiToneUpdate
+
 	RTI
 
 PALETTEDATA:
@@ -503,7 +528,10 @@ BACKGROUNDDATA:	;512 BYTES
 BACKGROUNDPALETTEDATA:	;32 bytes
 	.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-	
+
+.include "wismm.s"
+.include "famitone2.s"
+
 .segment "VECTORS"
 	.word NMI
 	.word RESET
