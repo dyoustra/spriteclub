@@ -1499,8 +1499,7 @@ NMI: ; PPU Update Loop -- gets called every frame
 	STA $0240
 
 	ENEMY_COLLISION: 
-		;loading player
-
+		;PLAYER
 		LDA $0202
 		AND #%01000000
 		BEQ :+ ; branch if not flipped horizontally 
@@ -1536,6 +1535,7 @@ NMI: ; PPU Update Loop -- gets called every frame
 		STA _A_bottomright_y
 
 		:
+		;ENEMIES
 		LDA enemy_1_x
 		STA _B_topleft_x 
 		CLC 
@@ -1626,9 +1626,51 @@ NMI: ; PPU Update Loop -- gets called every frame
 		JSR CHECK_COLLISION
 		JSR EXECUTE_PLAYER_COLLISION
 
+		;BONES
+		LDA $023B
+		STA _B_topleft_x 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_x 
 
+		LDA $0238
+		STA _B_topleft_y 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_y
 
+		JSR CHECK_COLLISION
+		JSR EXECUTE_PLAYER_COLLISION
 
+		LDA $023F
+		STA _B_topleft_x 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_x 
+
+		LDA $023C 
+		STA _B_topleft_y 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_y
+
+		JSR CHECK_COLLISION
+		JSR EXECUTE_PLAYER_COLLISION
+
+		LDA $0243
+		STA _B_topleft_x 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_x 
+
+		LDA $0240 
+		STA _B_topleft_y 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_y
+
+		JSR CHECK_COLLISION
+		JSR EXECUTE_PLAYER_COLLISION
  	RTI
 
 ENEMY_MOVEMENT_HANDLER:
