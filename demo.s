@@ -1039,467 +1039,490 @@ NMI: ; PPU Update Loop -- gets called every frame
 
 		enemy_1_handle_done:
 	
-; 	ENEMY_2:
-; 		LDA _enemy_subroutine_counter
-; 		TAX
-; 		INX
-; 		STX _enemy_subroutine_counter
+	ENEMY_2:
+		LDA _enemy_subroutine_counter
+		TAX
+		INX
+		STX _enemy_subroutine_counter
 
-; 		LDA enemy_2_initialized
-; 		BEQ enemy_2_handle_uninitalized
-; 		LDA enemy_2_active
-; 		BEQ enemy_2_handle_inactive
+		LDA enemy_2_initialized
+		BEQ enemy_2_handle_uninitalized
+		LDA enemy_2_active
+		BEQ enemy_2_handle_inactive
 
-; 		; update enemy 1 x and y
-; 		LDA enemy_2_x
-; 		STA $0227
-; 		LDA enemy_2_y
-; 		STA $0224
+		; update enemy 1 x and y
+		LDA enemy_2_x
+		STA $0227
+		LDA enemy_2_y
+		STA $0224
 
-; 		; setup input parameters
-; 		LDA enemy_2_x
-; 		STA _enemy_x
-; 		LDA enemy_2_y
-; 		STA _enemy_y
-; 		LDA enemy_2_offset_x
-; 		STA _enemy_offset_x
-; 		LDA enemy_2_offset_y
-; 		STA _enemy_offset_y
+		; setup input parameters
+		LDA enemy_2_x
+		STA _enemy_x
+		LDA enemy_2_y
+		STA _enemy_y
+		LDA enemy_2_offset_x
+		STA _enemy_offset_x
+		LDA enemy_2_offset_y
+		STA _enemy_offset_y
 
-; 		JSR ENEMY_MOVEMENT_HANDLER
+		JSR ENEMY_MOVEMENT_HANDLER
 
-; 		; handle function end
+		; handle function end
 		
-; 		; update positions
-; 		LDA _enemy_x
-; 		STA enemy_2_x
-; 		LDA _enemy_y
-; 		STA enemy_2_y
+		; update positions
+		LDA _enemy_x
+		STA enemy_2_x
+		LDA _enemy_y
+		STA enemy_2_y
 
-; 		; pick the right animation frame for the enemy
-; 		LDA _enemy_sprite_tile_index
-; 		STA $0225
-; 		JMP enemy_2_handle_done
+		; pick the right animation frame for the enemy
+		LDA _enemy_sprite_tile_index
+		STA $0225
+		JMP enemy_2_handle_done
 	
-; 		enemy_2_handle_uninitalized:
-; 			LDA _spawn_timer_hi
-; 			CMP #4 ; spawn after 4 cycles
-; 			BNE enemy_2_not_ready_to_initalize
-; 			LDA #1
-; 			STA enemy_2_initialized
-; 			LDA _global_spawn_x
-; 			STA enemy_2_x
-; 			STA $0227 
-; 			LDA _global_spawn_y
-; 			STA enemy_2_y
-; 			STA $0224
-; 			JSR MOVE_SPAWN_POINT
-; 			enemy_2_not_ready_to_initalize:
-; 			JMP enemy_2_handle_done
-; 		enemy_2_handle_inactive:
-; 			LDA enemy_2_spawn_counter
-; 			CMP #32
-; 			BNE enemy_2_spawn_animation
-; 			LDA #1
-; 			STA enemy_2_active
-; 			JMP enemy_2_handle_done
-; 		enemy_2_spawn_animation:
-; 			LDA enemy_2_spawn_counter 
-; 			TAX
-; 			INX
-; 			STX enemy_2_spawn_counter ; increment the spawn counter
+		enemy_2_handle_uninitalized:
+			LDA _spawn_timer_hi
+			CMP #4 ; spawn after 4 cycles
+			BNE enemy_2_not_ready_to_initalize
+			LDA #1
+			STA enemy_2_initialized
+			LDA _global_spawn_x
+			STA enemy_2_x
+			STA $0227 
+			LDA _global_spawn_y
+			STA enemy_2_y
+			STA $0224
+			JSR MOVE_SPAWN_POINT
+			enemy_2_not_ready_to_initalize:
+			JMP enemy_2_handle_done
+		enemy_2_handle_inactive:
+			LDA enemy_2_spawn_counter
+			CMP #32
+			BNE enemy_2_spawn_animation
+			LDA #1
+			STA enemy_2_active
+			JMP enemy_2_handle_done
+		enemy_2_spawn_animation:
+			LDA enemy_2_spawn_counter 
+			TAX
+			INX
+			STX enemy_2_spawn_counter ; increment the spawn counter
 			
-; 			LSR 
-; 			LSR
-; 			LSR
-; 			LSR
+			LSR 
+			LSR
+			LSR
+			LSR
 
-; 			CLC
-; 			ADC #$50
-; 			STA $0225
+			CLC
+			ADC #$50
+			STA $0225
 
-; 		enemy_2_handle_done:
+		enemy_2_handle_done:
 
-; 	ENEMY_3:
-; 		LDA _enemy_subroutine_counter
-; 		TAX
-; 		INX
-; 		STX _enemy_subroutine_counter
+	ENEMY_3:
+		LDA _enemy_subroutine_counter
+		TAX
+		INX
+		STX _enemy_subroutine_counter
 
-; 		LDA enemy_3_initialized
-; 		BEQ enemy_3_handle_uninitalized
-; 		LDA enemy_3_active
-; 		BEQ enemy_3_handle_inactive
+		LDA enemy_3_initialized
+		BEQ enemy_3_handle_uninitalized
+		LDA enemy_3_active
+		BEQ enemy_3_handle_inactive
 
-; 		; update enemy 1 x and y
-; 		LDA enemy_3_x
-; 		STA $022B
-; 		LDA enemy_3_y
-; 		STA $0228
+		; update enemy 1 x and y
+		LDA enemy_3_x
+		STA $022B
+		LDA enemy_3_y
+		STA $0228
 
-; 		; setup input parameters
-; 		LDA enemy_3_x
-; 		STA _enemy_x
-; 		LDA enemy_3_y
-; 		STA _enemy_y
-; 		LDA enemy_3_offset_x
-; 		STA _enemy_offset_x
-; 		LDA enemy_3_offset_y
-; 		STA _enemy_offset_y
+		; setup input parameters
+		LDA enemy_3_x
+		STA _enemy_x
+		LDA enemy_3_y
+		STA _enemy_y
+		LDA enemy_3_offset_x
+		STA _enemy_offset_x
+		LDA enemy_3_offset_y
+		STA _enemy_offset_y
 
-; 		JSR ENEMY_MOVEMENT_HANDLER
+		JSR ENEMY_MOVEMENT_HANDLER
 
-; 		; handle function end
+		; handle function end
 		
-; 		; update positions
-; 		LDA _enemy_x
-; 		STA enemy_3_x
-; 		LDA _enemy_y
-; 		STA enemy_3_y
+		; update positions
+		LDA _enemy_x
+		STA enemy_3_x
+		LDA _enemy_y
+		STA enemy_3_y
 
-; 		; pick the right animation frame for the enemy
-; 		LDA _enemy_sprite_tile_index
-; 		STA $0229
-; 		JMP enemy_3_handle_done
+		; pick the right animation frame for the enemy
+		LDA _enemy_sprite_tile_index
+		STA $0229
+		JMP enemy_3_handle_done
 	
-; 		enemy_3_handle_uninitalized:
-; 			LDA _spawn_timer_hi
-; 			CMP #6 ; spawn after 6 cycles
-; 			BNE enemy_3_not_ready_to_initalize
-; 			LDA #1
-; 			STA enemy_3_initialized
-; 			LDA _global_spawn_x
-; 			STA enemy_3_x
-; 			STA $022B 
-; 			LDA _global_spawn_y
-; 			STA enemy_3_y
-; 			STA $0228
-; 			JSR MOVE_SPAWN_POINT
-; 			enemy_3_not_ready_to_initalize:
-; 			JMP enemy_3_handle_done
-; 		enemy_3_handle_inactive:
-; 			LDA enemy_3_spawn_counter
-; 			CMP #32
-; 			BNE enemy_3_spawn_animation
-; 			LDA #1
-; 			STA enemy_3_active
-; 			JMP enemy_3_handle_done
-; 		enemy_3_spawn_animation:
-; 			LDA enemy_3_spawn_counter 
-; 			TAX
-; 			INX
-; 			STX enemy_3_spawn_counter ; increment the spawn counter
+		enemy_3_handle_uninitalized:
+			LDA _spawn_timer_hi
+			CMP #6 ; spawn after 6 cycles
+			BNE enemy_3_not_ready_to_initalize
+			LDA #1
+			STA enemy_3_initialized
+			LDA _global_spawn_x
+			STA enemy_3_x
+			STA $022B 
+			LDA _global_spawn_y
+			STA enemy_3_y
+			STA $0228
+			JSR MOVE_SPAWN_POINT
+			enemy_3_not_ready_to_initalize:
+			JMP enemy_3_handle_done
+		enemy_3_handle_inactive:
+			LDA enemy_3_spawn_counter
+			CMP #32
+			BNE enemy_3_spawn_animation
+			LDA #1
+			STA enemy_3_active
+			JMP enemy_3_handle_done
+		enemy_3_spawn_animation:
+			LDA enemy_3_spawn_counter 
+			TAX
+			INX
+			STX enemy_3_spawn_counter ; increment the spawn counter
 			
-; 			LSR 
-; 			LSR
-; 			LSR
-; 			LSR
+			LSR 
+			LSR
+			LSR
+			LSR
 
-; 			CLC
-; 			ADC #$50
-; 			STA $0229
+			CLC
+			ADC #$50
+			STA $0229
 
-; 		enemy_3_handle_done:
+		enemy_3_handle_done:
 
-; 	ENEMY_4:
-; 		LDA _enemy_subroutine_counter
-; 		TAX
-; 		INX
-; 		STX _enemy_subroutine_counter
+	ENEMY_4:
+		LDA _enemy_subroutine_counter
+		TAX
+		INX
+		STX _enemy_subroutine_counter
 
-; 		LDA enemy_4_initialized
-; 		BEQ enemy_4_handle_uninitalized
-; 		LDA enemy_4_active
-; 		BEQ enemy_4_handle_inactive
+		LDA enemy_4_initialized
+		BEQ enemy_4_handle_uninitalized
+		LDA enemy_4_active
+		BEQ enemy_4_handle_inactive
 
-; 		; update enemy x and y
-; 		LDA enemy_4_x
-; 		STA $022F
-; 		LDA enemy_4_y
-; 		STA $022C
+		; update enemy x and y
+		LDA enemy_4_x
+		STA $022F
+		LDA enemy_4_y
+		STA $022C
 
-; 		; setup input parameters
-; 		LDA enemy_4_x
-; 		STA _projectile_enemy_x
-; 		LDA enemy_4_y
-; 		STA _projectile_enemy_y
-; 		LDA enemy_4_target_x
-; 		STA _projectile_enemy_target_x
-; 		LDA enemy_4_target_y
-; 		STA _projectile_enemy_target_y
+		; setup input parameters
+		LDA enemy_4_x
+		STA _projectile_enemy_x
+		LDA enemy_4_y
+		STA _projectile_enemy_y
+		LDA enemy_4_target_x
+		STA _projectile_enemy_target_x
+		LDA enemy_4_target_y
+		STA _projectile_enemy_target_y
 	
-; 		JSR PROJECTILE_ENEMY_HANDLER
+		JSR PROJECTILE_ENEMY_HANDLER
 
-; 		; handle function end
+		; handle function end
 
-; 		; update positions and targets
-; 		LDA _projectile_enemy_x
-; 		STA enemy_4_x
-; 		LDA _projectile_enemy_y
-; 		STA enemy_4_y
-; 		LDA _projectile_enemy_target_x
-; 		STA enemy_4_target_x
-; 		LDA _projectile_enemy_target_y
-; 		STA enemy_4_target_y
+		; update positions and targets
+		LDA _projectile_enemy_x
+		STA enemy_4_x
+		LDA _projectile_enemy_y
+		STA enemy_4_y
+		LDA _projectile_enemy_target_x
+		STA enemy_4_target_x
+		LDA _projectile_enemy_target_y
+		STA enemy_4_target_y
 
-; 		JMP enemy_4_handle_done
+		JMP enemy_4_handle_done
 	
-; 		enemy_4_handle_uninitalized:
-; 			LDA _spawn_timer_hi
-; 			CMP #3 ; spawn after 3 cycles
-; 			BNE enemy_4_not_ready_to_initalize
-; 			LDA #1
-; 			STA enemy_4_initialized
-; 			LDA _global_spawn_x
-; 			STA enemy_4_x
-; 			STA $022F 
-; 			LDA _global_spawn_y
-; 			STA enemy_4_y
-; 			STA $022C
-; 			JSR MOVE_SPAWN_POINT
-; 			enemy_4_not_ready_to_initalize:
-; 			JMP enemy_4_handle_done
-; 		enemy_4_handle_inactive:
-; 			LDA enemy_4_spawn_counter
-; 			CMP #32
-; 			BNE enemy_4_spawn_animation
-; 			LDA #$20
-; 			STA $022D
-; 			LDA #1
-; 			STA enemy_4_active
-; 			JMP enemy_4_handle_done
-; 		enemy_4_spawn_animation:
-; 			LDA enemy_4_spawn_counter 
-; 			TAX
-; 			INX
-; 			STX enemy_4_spawn_counter ; increment the spawn counter
+		enemy_4_handle_uninitalized:
+			LDA _spawn_timer_hi
+			CMP #3 ; spawn after 3 cycles
+			BNE enemy_4_not_ready_to_initalize
+			LDA #1
+			STA enemy_4_initialized
+			LDA _global_spawn_x
+			STA enemy_4_x
+			STA $022F 
+			LDA _global_spawn_y
+			STA enemy_4_y
+			STA $022C
+			JSR MOVE_SPAWN_POINT
+			enemy_4_not_ready_to_initalize:
+			JMP enemy_4_handle_done
+		enemy_4_handle_inactive:
+			LDA enemy_4_spawn_counter
+			CMP #32
+			BNE enemy_4_spawn_animation
+			LDA #$20
+			STA $022D
+			LDA #1
+			STA enemy_4_active
+			JMP enemy_4_handle_done
+		enemy_4_spawn_animation:
+			LDA enemy_4_spawn_counter 
+			TAX
+			INX
+			STX enemy_4_spawn_counter ; increment the spawn counter
 			
-; 			LSR 
-; 			LSR
-; 			LSR
-; 			LSR
+			LSR 
+			LSR
+			LSR
+			LSR
 
-; 			CLC
-; 			ADC #$60
-; 			STA $022D
+			CLC
+			ADC #$60
+			STA $022D
 
-; 		enemy_4_handle_done:
+		enemy_4_handle_done:
 
-; 	ENEMY_5:
-; 		LDA _enemy_subroutine_counter
-; 		TAX
-; 		INX
-; 		STX _enemy_subroutine_counter
+	ENEMY_5:
+		LDA _enemy_subroutine_counter
+		TAX
+		INX
+		STX _enemy_subroutine_counter
 
-; 		LDA enemy_5_initialized
-; 		BEQ enemy_5_handle_uninitalized
-; 		LDA enemy_5_active
-; 		BEQ enemy_5_handle_inactive
+		LDA enemy_5_initialized
+		BEQ enemy_5_handle_uninitalized
+		LDA enemy_5_active
+		BEQ enemy_5_handle_inactive
 
-; 		; update enemy x and y
-; 		LDA enemy_5_x
-; 		STA $0233
-; 		LDA enemy_5_y
-; 		STA $0230
+		; update enemy x and y
+		LDA enemy_5_x
+		STA $0233
+		LDA enemy_5_y
+		STA $0230
 
-; 		; setup input parameters
-; 		LDA enemy_5_x
-; 		STA _projectile_enemy_x
-; 		LDA enemy_5_y
-; 		STA _projectile_enemy_y
-; 		LDA enemy_5_target_x
-; 		STA _projectile_enemy_target_x
-; 		LDA enemy_5_target_y
-; 		STA _projectile_enemy_target_y
+		; setup input parameters
+		LDA enemy_5_x
+		STA _projectile_enemy_x
+		LDA enemy_5_y
+		STA _projectile_enemy_y
+		LDA enemy_5_target_x
+		STA _projectile_enemy_target_x
+		LDA enemy_5_target_y
+		STA _projectile_enemy_target_y
 	
-; 		JSR PROJECTILE_ENEMY_HANDLER
+		JSR PROJECTILE_ENEMY_HANDLER
 
-; 		; handle function end
+		; handle function end
 
-; 		; update positions and targets
-; 		LDA _projectile_enemy_x
-; 		STA enemy_5_x
-; 		LDA _projectile_enemy_y
-; 		STA enemy_5_y
-; 		LDA _projectile_enemy_target_x
-; 		STA enemy_5_target_x
-; 		LDA _projectile_enemy_target_y
-; 		STA enemy_5_target_y
+		; update positions and targets
+		LDA _projectile_enemy_x
+		STA enemy_5_x
+		LDA _projectile_enemy_y
+		STA enemy_5_y
+		LDA _projectile_enemy_target_x
+		STA enemy_5_target_x
+		LDA _projectile_enemy_target_y
+		STA enemy_5_target_y
 
-; 		JMP enemy_5_handle_done
+		JMP enemy_5_handle_done
 	
-; 		enemy_5_handle_uninitalized:
-; 			LDA _spawn_timer_hi
-; 			CMP #5 ; spawn after 5 cycles
-; 			BNE enemy_5_not_ready_to_initalize
-; 			LDA #1
-; 			STA enemy_5_initialized
-; 			LDA _global_spawn_x
-; 			STA enemy_5_x
-; 			STA $0233
-; 			LDA _global_spawn_y
-; 			STA enemy_5_y
-; 			STA $0230
-; 			JSR MOVE_SPAWN_POINT
-; 			enemy_5_not_ready_to_initalize:
-; 			JMP enemy_5_handle_done
-; 		enemy_5_handle_inactive:
-; 			LDA enemy_5_spawn_counter
-; 			CMP #32
-; 			BNE enemy_5_spawn_animation
-; 			LDA #$20
-; 			STA $0231
-; 			LDA #1
-; 			STA enemy_5_active
-; 			JMP enemy_5_handle_done
-; 		enemy_5_spawn_animation:
-; 			LDA enemy_5_spawn_counter 
-; 			TAX
-; 			INX
-; 			STX enemy_5_spawn_counter ; increment the spawn counter
+		enemy_5_handle_uninitalized:
+			LDA _spawn_timer_hi
+			CMP #5 ; spawn after 5 cycles
+			BNE enemy_5_not_ready_to_initalize
+			LDA #1
+			STA enemy_5_initialized
+			LDA _global_spawn_x
+			STA enemy_5_x
+			STA $0233
+			LDA _global_spawn_y
+			STA enemy_5_y
+			STA $0230
+			JSR MOVE_SPAWN_POINT
+			enemy_5_not_ready_to_initalize:
+			JMP enemy_5_handle_done
+		enemy_5_handle_inactive:
+			LDA enemy_5_spawn_counter
+			CMP #32
+			BNE enemy_5_spawn_animation
+			LDA #$20
+			STA $0231
+			LDA #1
+			STA enemy_5_active
+			JMP enemy_5_handle_done
+		enemy_5_spawn_animation:
+			LDA enemy_5_spawn_counter 
+			TAX
+			INX
+			STX enemy_5_spawn_counter ; increment the spawn counter
 			
-; 			LSR 
-; 			LSR
-; 			LSR
-; 			LSR
+			LSR 
+			LSR
+			LSR
+			LSR
 
-; 			CLC
-; 			ADC #$60
-; 			STA $0231
+			CLC
+			ADC #$60
+			STA $0231
 
-; 		enemy_5_handle_done:
+		enemy_5_handle_done:
 
-; 	ENEMY_6:
-; 		LDA _enemy_subroutine_counter
-; 		TAX
-; 		INX
-; 		STX _enemy_subroutine_counter
+	ENEMY_6:
+		LDA _enemy_subroutine_counter
+		TAX
+		INX
+		STX _enemy_subroutine_counter
 
-; 		LDA enemy_6_initialized
-; 		BEQ enemy_6_handle_uninitalized
-; 		LDA enemy_6_active
-; 		BEQ enemy_6_handle_inactive
+		LDA enemy_6_initialized
+		BEQ enemy_6_handle_uninitalized
+		LDA enemy_6_active
+		BEQ enemy_6_handle_inactive
 
-; 		; update enemy x and y
-; 		LDA enemy_6_x
-; 		STA $0237
-; 		LDA enemy_6_y
-; 		STA $0234
+		; update enemy x and y
+		LDA enemy_6_x
+		STA $0237
+		LDA enemy_6_y
+		STA $0234
 
-; 		; setup input parameters
-; 		LDA enemy_6_x
-; 		STA _projectile_enemy_x
-; 		LDA enemy_6_y
-; 		STA _projectile_enemy_y
-; 		LDA enemy_6_target_x
-; 		STA _projectile_enemy_target_x
-; 		LDA enemy_6_target_y
-; 		STA _projectile_enemy_target_y
+		; setup input parameters
+		LDA enemy_6_x
+		STA _projectile_enemy_x
+		LDA enemy_6_y
+		STA _projectile_enemy_y
+		LDA enemy_6_target_x
+		STA _projectile_enemy_target_x
+		LDA enemy_6_target_y
+		STA _projectile_enemy_target_y
 	
-; 		JSR PROJECTILE_ENEMY_HANDLER
+		JSR PROJECTILE_ENEMY_HANDLER
 
-; 		; handle function end
+		; handle function end
 
-; 		; update positions and targets
-; 		LDA _projectile_enemy_x
-; 		STA enemy_6_x
-; 		LDA _projectile_enemy_y
-; 		STA enemy_6_y
-; 		LDA _projectile_enemy_target_x
-; 		STA enemy_6_target_x
-; 		LDA _projectile_enemy_target_y
-; 		STA enemy_6_target_y
+		; update positions and targets
+		LDA _projectile_enemy_x
+		STA enemy_6_x
+		LDA _projectile_enemy_y
+		STA enemy_6_y
+		LDA _projectile_enemy_target_x
+		STA enemy_6_target_x
+		LDA _projectile_enemy_target_y
+		STA enemy_6_target_y
 
-; 		JMP enemy_6_handle_done
+		JMP enemy_6_handle_done
 	
-; 		enemy_6_handle_uninitalized:
-; 			LDA _spawn_timer_hi
-; 			CMP #7 ; spawn after 7 cycles
-; 			BNE enemy_6_not_ready_to_initalize
-; 			LDA #1
-; 			STA enemy_6_initialized
-; 			LDA _global_spawn_x
-; 			STA enemy_6_x
-; 			STA $0237
-; 			LDA _global_spawn_y
-; 			STA enemy_6_y
-; 			STA $0234
-; 			JSR MOVE_SPAWN_POINT
-; 			enemy_6_not_ready_to_initalize:
-; 			JMP enemy_6_handle_done
-; 		enemy_6_handle_inactive:
-; 			LDA enemy_6_spawn_counter
-; 			CMP #32
-; 			BNE enemy_6_spawn_animation
-; 			LDA #$20
-; 			STA $0235
-; 			LDA #1
-; 			STA enemy_6_active
-; 			JMP enemy_6_handle_done
-; 		enemy_6_spawn_animation:
-; 			LDA enemy_6_spawn_counter 
-; 			TAX
-; 			INX
-; 			STX enemy_6_spawn_counter ; increment the spawn counter
+		enemy_6_handle_uninitalized:
+			LDA _spawn_timer_hi
+			CMP #7 ; spawn after 7 cycles
+			BNE enemy_6_not_ready_to_initalize
+			LDA #1
+			STA enemy_6_initialized
+			LDA _global_spawn_x
+			STA enemy_6_x
+			STA $0237
+			LDA _global_spawn_y
+			STA enemy_6_y
+			STA $0234
+			JSR MOVE_SPAWN_POINT
+			enemy_6_not_ready_to_initalize:
+			JMP enemy_6_handle_done
+		enemy_6_handle_inactive:
+			LDA enemy_6_spawn_counter
+			CMP #32
+			BNE enemy_6_spawn_animation
+			LDA #$20
+			STA $0235
+			LDA #1
+			STA enemy_6_active
+			JMP enemy_6_handle_done
+		enemy_6_spawn_animation:
+			LDA enemy_6_spawn_counter 
+			TAX
+			INX
+			STX enemy_6_spawn_counter ; increment the spawn counter
 			
-; 			LSR 
-; 			LSR
-; 			LSR
-; 			LSR
+			LSR 
+			LSR
+			LSR
+			LSR
 
-; 			CLC
-; 			ADC #$60
-; 			STA $0235
+			CLC
+			ADC #$60
+			STA $0235
 
-; 		enemy_6_handle_done:
+		enemy_6_handle_done:
 
-; 	BONE_MOVEMENT:
-; 	LDA _bone_frame_counter
-; 	TAX
-; 	INX
-; 	STX _bone_frame_counter
+	BONE_MOVEMENT:
+	LDA _bone_frame_counter
+	TAX
+	INX
+	STX _bone_frame_counter
 
-; 	; set the correct animation frame
-; 	LDA _bone_frame_counter
-; 	LSR
-; 	LSR
-; 	AND #$03 ; we only care about the last two bits
-; 	CLC
-; 	ADC #$30 ; we want row 3 of sprites
+	; set the correct animation frame
+	LDA _bone_frame_counter
+	LSR
+	LSR
+	AND #$03 ; we only care about the last two bits
+	CLC
+	ADC #$30 ; we want row 3 of sprites
 
-; 	STA $0239
-; 	STA $023D
-; 	STA $0241
+	STA $0239
+	STA $023D
+	STA $0241
 
-; 	LDA $023B
-; 	CLC
-; 	ADC bone_1_vel_x
-; 	STA $023B
-; 	LDA $0238
-; 	CLC
-; 	ADC bone_1_vel_y
-; 	STA $0238
+	LDA $023B
+	CLC
+	ADC bone_1_vel_x
+	STA $023B
+	LDA $0238
+	CLC
+	ADC bone_1_vel_y
+	STA $0238
 
-; 	LDA $023F
-; 	CLC
-; 	ADC bone_2_vel_x
-; 	STA $023F
-; 	LDA $023C
-; 	CLC
-; 	ADC bone_2_vel_y
-; 	STA $023C
+	LDA $023F
+	CLC
+	ADC bone_2_vel_x
+	STA $023F
+	LDA $023C
+	CLC
+	ADC bone_2_vel_y
+	STA $023C
 
-; 	LDA $0243
-; 	CLC
-; 	ADC bone_3_vel_x
-; 	STA $0243
-; 	LDA $0240
-; 	CLC
-; 	ADC bone_3_vel_y
-; 	STA $0240
+	LDA $0243
+	CLC
+	ADC bone_3_vel_x
+	STA $0243
+	LDA $0240
+	CLC
+	ADC bone_3_vel_y
+	STA $0240
 
 	ENEMY_COLLISION: 
-		; load sprite A and B, check collision, execute collision
+		;loading player
+
+		LDA $0202
+		AND #%01000000
+		BEQ :+ ; branch if not flipped horizontally 
+
+		; player flipped horizontally 
+		LDA player_x
+		CLC
+		ADC #4
+		STA _A_topleft_x ; store player's tile x + 4 to get true sprite x
+		CLC 
+		ADC #4 ; add four more for the right edge of the hitbox
+		STA _A_bottomright_x
+
+		LDA player_y
+		STA _A_topleft_y
+		CLC
+		ADC #8 ; hitbox is 4x8
+		STA _A_bottomright_y
+
+		JMP :++
+
+		: ; player not flipped horizontally
 		LDA player_x
 		STA _A_topleft_x
 		CLC 
@@ -1512,6 +1535,7 @@ NMI: ; PPU Update Loop -- gets called every frame
 		ADC #8 ; hitbox is 4x8
 		STA _A_bottomright_y
 
+		:
 		LDA enemy_1_x
 		STA _B_topleft_x 
 		CLC 
@@ -1527,9 +1551,84 @@ NMI: ; PPU Update Loop -- gets called every frame
 		JSR CHECK_COLLISION
 		JSR EXECUTE_PLAYER_COLLISION
 
+		LDA enemy_2_x
+		STA _B_topleft_x 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_x 
 
-		
-		
+		LDA enemy_2_y 
+		STA _B_topleft_y 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_y
+
+		JSR CHECK_COLLISION
+		JSR EXECUTE_PLAYER_COLLISION
+
+		LDA enemy_3_x
+		STA _B_topleft_x 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_x 
+
+		LDA enemy_3_y 
+		STA _B_topleft_y 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_y
+
+		JSR CHECK_COLLISION
+		JSR EXECUTE_PLAYER_COLLISION
+
+		LDA enemy_4_x
+		STA _B_topleft_x 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_x 
+
+		LDA enemy_4_y 
+		STA _B_topleft_y 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_y
+
+		JSR CHECK_COLLISION
+		JSR EXECUTE_PLAYER_COLLISION
+
+		LDA enemy_5_x
+		STA _B_topleft_x 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_x 
+
+		LDA enemy_5_y 
+		STA _B_topleft_y 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_y
+
+		JSR CHECK_COLLISION
+		JSR EXECUTE_PLAYER_COLLISION
+
+		LDA enemy_6_x
+		STA _B_topleft_x 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_x 
+
+		LDA enemy_6_y 
+		STA _B_topleft_y 
+		CLC 
+		ADC #8 ; hitbox is 8x8
+		STA _B_bottomright_y
+
+		JSR CHECK_COLLISION
+		JSR EXECUTE_PLAYER_COLLISION
+
+
+
+
  	RTI
 
 ENEMY_MOVEMENT_HANDLER:
