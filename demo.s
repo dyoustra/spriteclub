@@ -138,6 +138,24 @@ _B_bottomright_y: .RES 1
 
 has_collided: .RES 1
 
+; score digits
+_need_to_update_score: .byte 0
+_updated_score: .byte 0
+_score_digit_1: .byte 0
+_score_digit_2: .byte 0 
+_score_digit_3: .byte 0 
+_score_digit_4: .byte 0 
+_score_digit_5: .byte 0
+_score_digit_6: .byte 0
+_score_digit_7: .byte 0
+_new_score_digit_1: .byte 0
+_new_score_digit_2: .byte 0 
+_new_score_digit_3: .byte 0 
+_new_score_digit_4: .byte 0 
+_new_score_digit_5: .byte 0
+_new_score_digit_6: .byte 0
+_new_score_digit_7: .byte 0
+
 .segment "STARTUP"
 
 RESET:
@@ -250,8 +268,8 @@ LOADBACKGROUNDPALETTEDATA:
 	;RESET SCROLL
 	LDA #$00
 	STA $2005
-	STA $2005	
-		
+	STA $2005		
+
 ;ENABLE INTERUPTS
 	CLI
 	
@@ -321,28 +339,6 @@ LOADBACKGROUNDPALETTEDATA:
 	STA enemy_6_y
 	LDA $0237
 	STA enemy_6_x
-
-;SET UP MUSIC
-
-	LOAD_MUS_DATA:
-		LDX #00
-	MUSDATALOOP:
-		LDA wismm_music_data, X
-		STA $1D00, X
-		INX
-		CPX #$F2
-		BNE MUSDATALOOP
-
-		LDA #$01
-		;LDX #.lobyte(wismm_music_data)
-		;LDY #.hibyte(wismm_music_data)
-		LDX #$00
-		LDY #$1D
-		JSR FamiToneInit
-
-		LDA #00
-
-		JSR FamiToneMusicPlay
 
 	INFLOOP:
 		JMP INFLOOP
@@ -1849,6 +1845,10 @@ NMI: ; PPU Update Loop -- gets called every frame
 	ENEMY_COLLISION: 
 
 	SPEAR_COLLISION:
+		LDA #0
+		STA _need_to_update_score
+		STA _updated_score
+
 		LDA spear_is_active
 		BEQ intermediate_jump6
 
@@ -1863,6 +1863,9 @@ NMI: ; PPU Update Loop -- gets called every frame
 		CLC
 		ADC #16
 		STA _A_bottomright_y
+
+		LDA enemy_1_active
+		BEQ enemy_1_skip_spear_collision
 
 		; check collision with enemy 1
 		LDA enemy_1_x
@@ -1880,7 +1883,14 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BEQ :+ 
 		LDA #0
 		STA enemy_1_active
+		LDX _need_to_update_score
+		INX
+		STX _need_to_update_score
 		: 
+		enemy_1_skip_spear_collision:
+
+		LDA enemy_2_active
+		BEQ enemy_2_skip_spear_collision
 
 		; check collision with enemy 2
 		LDA enemy_2_x
@@ -1898,7 +1908,14 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BEQ :+ 
 		LDA #0
 		STA enemy_2_active
+		LDX _need_to_update_score
+		INX
+		STX _need_to_update_score
 		: 
+		enemy_2_skip_spear_collision:
+
+		LDA enemy_3_active
+		BEQ enemy_3_skip_spear_collision
 
 		; check collision with enemy 3
 		LDA enemy_3_x
@@ -1912,16 +1929,23 @@ NMI: ; PPU Update Loop -- gets called every frame
 		ADC #8 ; hitbox is 8x8
 		STA _B_bottomright_y
 
-		JSR CHECK_COLLISION
-		BEQ :+ 
-		LDA #0
-		STA enemy_3_active
-		: 
-
 		JMP :+
 		intermediate_jump6:
 		JMP end_spear_collision_check
 		:
+
+		JSR CHECK_COLLISION
+		BEQ :+ 
+		LDA #0
+		STA enemy_3_active
+		LDX _need_to_update_score
+		INX
+		STX _need_to_update_score
+		: 
+		enemy_3_skip_spear_collision:
+
+		LDA enemy_4_active
+		BEQ enemy_4_skip_spear_collision
 
 		; check collision with enemy 4
 		LDA enemy_4_x
@@ -1939,7 +1963,14 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BEQ :+ 
 		LDA #0
 		STA enemy_4_active
+		LDX _need_to_update_score
+		INX
+		STX _need_to_update_score
 		: 
+		enemy_4_skip_spear_collision:
+
+		LDA enemy_5_active
+		BEQ enemy_5_skip_spear_collision
 
 		; check collision with enemy 5
 		LDA enemy_5_x
@@ -1957,7 +1988,14 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BEQ :+ 
 		LDA #0
 		STA enemy_5_active
+		LDX _need_to_update_score
+		INX
+		STX _need_to_update_score
 		: 
+		enemy_5_skip_spear_collision:
+
+		LDA enemy_6_active
+		BEQ enemy_6_skip_spear_collision
 
 		; check collision with enemy 6
 		LDA enemy_6_x
@@ -1975,12 +2013,113 @@ NMI: ; PPU Update Loop -- gets called every frame
 		BEQ :+ 
 		LDA #0
 		STA enemy_6_active
+		LDX _need_to_update_score
+		INX
+		STX _need_to_update_score
 		: 
+		enemy_6_skip_spear_collision:
 
 	end_spear_collision_check:
 
-	refresh_music:
-		JSR FamiToneUpdate
+	update_score_loop:   
+	LDA _need_to_update_score
+	BEQ :+
+		LDA #1
+		STA _updated_score
+		JSR INCREASE_SCORE
+		LDX _need_to_update_score
+		DEX
+		STX _need_to_update_score
+		JMP update_score_loop
+	:
+
+	; after this subroutine call, the scores are updated
+	; see if we need to update any sprites
+
+	LDA _score_digit_1
+	CMP _new_score_digit_1
+	BEQ :+
+		LDA #$70
+		CLC 
+		ADC _new_score_digit_1
+		STA $0245
+
+		LDA _new_score_digit_1
+		STA _score_digit_1
+	:
+
+	LDA _score_digit_2
+	CMP _new_score_digit_2
+	BEQ :+
+		LDA #$70
+		CLC 
+		ADC _new_score_digit_2
+		STA $0249
+
+		LDA _new_score_digit_2
+		STA _score_digit_2
+	:
+
+	LDA _score_digit_3
+	CMP _new_score_digit_3
+	BEQ :+
+		LDA #$70
+		CLC 
+		ADC _new_score_digit_3
+		STA $024D
+
+		LDA _new_score_digit_3
+		STA _score_digit_3
+	:
+
+	LDA _score_digit_4
+	CMP _new_score_digit_4
+	BEQ :+
+		LDA #$70
+		CLC 
+		ADC _new_score_digit_4
+		STA $0251
+
+		LDA _new_score_digit_4
+		STA _score_digit_4
+	:
+
+	LDA _score_digit_5
+	CMP _new_score_digit_5
+	BEQ :+
+		LDA #$70
+		CLC 
+		ADC _new_score_digit_5
+		STA $0255
+
+		LDA _new_score_digit_5
+		STA _score_digit_5
+	:
+
+	LDA _score_digit_6
+	CMP _new_score_digit_6
+	BEQ :+
+		LDA #$70
+		CLC 
+		ADC _new_score_digit_6
+		STA $0259
+
+		LDA _new_score_digit_6
+		STA _score_digit_6
+	:
+
+	LDA _score_digit_7
+	CMP _new_score_digit_7
+	BEQ :+
+		LDA #$70
+		CLC 
+		ADC _new_score_digit_7
+		STA $025D
+
+		LDA _new_score_digit_7
+		STA _score_digit_7
+	:
+
  	RTI
 
 ENEMY_MOVEMENT_HANDLER:
@@ -2395,6 +2534,94 @@ MOVE_SPAWN_POINT:
 	STA _global_spawn_x
 	RTS
 
+; This subroutine updates the score
+; A = 0 -> +75
+INCREASE_SCORE:
+	LDX #0
+	LDY #1 ; this will be the carry
+	LDA _new_score_digit_7
+	BNE :+
+		LDY #0
+		LDX #5
+	:
+	STX _new_score_digit_7
+
+	TYA
+	LDY #0
+	CLC
+	ADC _new_score_digit_6
+	CLC 
+	ADC #7
+	CMP #10
+	BCC :+
+		SEC
+		SBC #10
+		LDY #1
+	:
+	STA _new_score_digit_6
+
+	TYA
+	LDY #0
+	CLC
+	ADC _new_score_digit_5
+	CMP #10
+		BCC :+
+		SEC
+		SBC #10
+		LDY #1
+	:
+	STA _new_score_digit_5
+
+	TYA
+	LDY #0
+	CLC
+	ADC _new_score_digit_4
+	CMP #10
+		BCC :+
+		SEC
+		SBC #10
+		LDY #1
+	:
+	STA _new_score_digit_4
+
+	TYA
+	LDY #0
+	CLC
+	ADC _new_score_digit_3
+	CMP #10
+		BCC :+
+		SEC
+		SBC #10
+		LDY #1
+	:
+	STA _new_score_digit_3
+
+	TYA
+	LDY #0
+	CLC
+	ADC _new_score_digit_2
+	CMP #10
+		BCC :+
+		SEC
+		SBC #10
+		LDY #1
+	:
+	STA _new_score_digit_2
+
+	TYA
+	LDY #0
+	CLC
+	ADC _new_score_digit_1
+	CMP #10
+		BCC :+
+		SEC
+		SBC #10
+		LDY #1
+	:
+	STA _new_score_digit_1
+
+	RTS
+
 CHECK_COLLISION: 
 	; bcc for less than, beq for equal, bcs for greater than
 	LDA _A_topleft_x 
@@ -2477,17 +2704,17 @@ SPRITEDATA:
 	.byte $FF, $30, %00000010, $FF ; bone 3
 
 	; unused sprites
-	.byte $00, $FF, %00100000, $00 ; empty
-	.byte $00, $FF, %00100000, $00 ; empty
-	.byte $00, $FF, %00100000, $00 ; empty
-	.byte $00, $FF, %00100000, $00 ; empty
-	.byte $00, $FF, %00100000, $00 ; empty
-	.byte $00, $FF, %00100000, $00 ; empty
-	.byte $00, $FF, %00100000, $00 ; empty
+	.byte $07, $70, %00000001, $08 ; empty
+	.byte $07, $70, %00000001, $10 ; empty
+	.byte $07, $70, %00000001, $18 ; empty
+	.byte $07, $70, %00000001, $20 ; empty
+	.byte $07, $70, %00000001, $28 ; empty
+	.byte $07, $70, %00000001, $30 ; empty
+	.byte $07, $70, %00000001, $38 ; empty
 
 BACKGROUNDDATA:	;512 BYTES
-	.byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-	.byte $01,$02,$03,$04,$05,$06,$07,$02,$03,$04,$05,$06,$07,$02,$03,$04,$05,$06,$07,$02,$03,$04,$05,$06,$07,$02,$03,$04,$05,$06,$07,$08
+	.byte $80,$80,$80,$80,$80,$80,$80,$80,$80,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+	.byte $80,$80,$80,$80,$80,$80,$80,$80,$80,$04,$05,$06,$07,$02,$03,$04,$05,$06,$07,$02,$03,$04,$05,$06,$07,$02,$03,$04,$05,$06,$07,$08
 	.byte $11,$12,$13,$14,$15,$16,$17,$12,$13,$14,$15,$16,$17,$12,$13,$14,$15,$16,$17,$12,$13,$14,$15,$16,$17,$12,$13,$14,$15,$16,$17,$18
 	.byte $21,$22,$23,$24,$25,$26,$27,$22,$23,$24,$25,$26,$27,$22,$23,$24,$25,$26,$27,$22,$23,$24,$25,$26,$27,$22,$23,$24,$25,$26,$27,$28
 	.byte $31,$32,$33,$34,$35,$36,$37,$32,$33,$34,$35,$36,$37,$32,$33,$34,$35,$36,$37,$32,$33,$34,$35,$36,$37,$32,$33,$34,$35,$36,$37,$38
@@ -2506,10 +2733,6 @@ BACKGROUNDDATA:	;512 BYTES
 BACKGROUNDPALETTEDATA:	;32 bytes
 	.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-	
-INCLUDES:
-	.include "wismm.s"
-	.include "famitone2.s"
 	
 .segment "VECTORS"
 	.word NMI
